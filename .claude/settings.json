@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"c:/Users/harsh/Desktop/Avani Projects/event\" status --short)",
+      "Bash(git -C \"c:/Users/harsh/Desktop/Avani Projects/event\" log --oneline -5)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(cp server/.env.example server/.env)",
+      "Bash(cp client/.env.example client/.env)",
+      "Bash(node -e \"require\\('net'\\).createConnection\\(27017,'127.0.0.1'\\).on\\('connect',\\(\\)=>{console.log\\('MongoDB: REACHABLE'\\);process.exit\\(0\\)}\\).on\\('error',\\(\\)=>{console.log\\('MongoDB: NOT running locally'\\);process.exit\\(0\\)}\\)\")",
+      "Bash(npm start *)",
+      "Bash(node -e ' *)",
+      "Bash(MONGO_URI=\"mongodb://127.0.0.1:27017/district\" node src/server.js)",
+      "Bash(PORT=5051 MONGO_URI=\"mongodb://127.0.0.1:27017/district\" node src/server.js)"
+    ]
+  }
+}
