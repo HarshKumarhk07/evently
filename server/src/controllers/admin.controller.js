@@ -6,6 +6,11 @@ import Booking from '../models/Booking.js';
 import ApiError from '../utils/ApiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { ok, paginated } from '../utils/ApiResponse.js';
+import { emailService } from '../services/email.service.js';
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 /* GET /api/admin/stats — headline metrics for the analytics dashboard. */
 export const getStats = asyncHandler(async (_req, res) => {
@@ -50,10 +55,11 @@ export const getStats = asyncHandler(async (_req, res) => {
 /* GET /api/admin/users */
 export const listUsers = asyncHandler(async (req, res) => {
   const page = Math.max(1, Number(req.query.page) || 1);
-  const limit = 12;
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 12));
   const filter = {};
-  if (req.query.search) {
-    const rx = new RegExp(req.query.search, 'i');
+  const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+  if (search) {
+    const rx = new RegExp(escapeRegExp(search), 'i');
     filter.$or = [{ name: rx }, { email: rx }];
   }
   if (req.query.role) filter.role = req.query.role;
@@ -71,6 +77,14 @@ export const updateUser = asyncHandler(async (req, res) => {
   const updates = {};
   if (role) updates.role = role;
   if (typeof isVerified === 'boolean') updates.isVerified = isVerified;
+  
+  /* Prevent creating more than one admin account. */
+  if (updates.role === 'admin') {
+    const existingAdmin = await User.findOne({ role: 'admin' }).lean();
+    if (existingAdmin && String(existingAdmin._id) !== String(req.params.id)) {
+      throw ApiError.badRequest('There is already an admin account');
+    }
+  }
 
   const user = await User.findByIdAndUpdate(req.params.id, updates, { new: true });
   if (!user) throw ApiError.notFound('User not found');
@@ -105,6 +119,76 @@ export const listBookings = asyncHandler(async (req, res) => {
     Booking.countDocuments(filter),
   ]);
   return paginated(res, items, { page, limit, total });
+});
+
+/* ────────────────────────── Manager approval ────────────────────────── */
+
+/**
+ * GET /api/admin/managers — list manager accounts.
+ * `?status=pending_approval|approved|rejected|all`
+ */
+export const listManagers = asyncHandler(async (req, res) => {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+
+  const filter = { role: 'manager' };
+  const status = req.query.status;
+  if (status && status !== 'all') {
+    filter['managerProfile.status'] = status;
+  }
+  if (req.query.search) {
+    const rx = new RegExp(escapeRegExp(String(req.query.search)), 'i');
+    filter.$or = [{ name: rx }, { email: rx }, { 'managerProfile.businessName': rx }];
+  }
+
+  const [items, total, pendingCount] = await Promise.all([
+    User.find(filter)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+    User.countDocuments(filter),
+    User.countDocuments({ role: 'manager', 'managerProfile.status': 'pending_approval' }),
+  ]);
+
+  return paginated(res, items, { page, limit, total }, 'OK', { pendingCount });
+});
+
+/* GET /api/admin/managers/:id — full manager profile (includes uploaded docs). */
+export const getManager = asyncHandler(async (req, res) => {
+  const user = await User.findOne({ _id: req.params.id, role: 'manager' }).lean();
+  if (!user) throw ApiError.notFound('Manager not found');
+  return ok(res, user);
+});
+
+/* POST /api/admin/managers/:id/approve */
+export const approveManager = asyncHandler(async (req, res) => {
+  const user = await User.findOne({ _id: req.params.id, role: 'manager' });
+  if (!user) throw ApiError.notFound('Manager not found');
+  if (!user.managerProfile) throw ApiError.badRequest('No manager profile to approve');
+
+  user.managerProfile.status = 'approved';
+  user.managerProfile.approvedAt = new Date();
+  user.managerProfile.approvedBy = req.user._id;
+  user.managerProfile.rejectionReason = '';
+  await user.save({ validateBeforeSave: false });
+
+  emailService.sendManagerApproved(user).catch(() => {});
+  return ok(res, user, 'Manager approved');
+});
+
+/* POST /api/admin/managers/:id/reject — body { reason } */
+export const rejectManager = asyncHandler(async (req, res) => {
+  const user = await User.findOne({ _id: req.params.id, role: 'manager' });
+  if (!user) throw ApiError.notFound('Manager not found');
+  if (!user.managerProfile) throw ApiError.badRequest('No manager profile to reject');
+
+  user.managerProfile.status = 'rejected';
+  user.managerProfile.rejectionReason = req.body?.reason || 'No reason provided';
+  await user.save({ validateBeforeSave: false });
+
+  emailService.sendManagerRejected(user, user.managerProfile.rejectionReason).catch(() => {});
+  return ok(res, user, 'Manager rejected');
 });
 
 /* PATCH /api/admin/bookings/:id — override a booking status. */

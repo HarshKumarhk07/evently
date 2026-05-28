@@ -23,6 +23,12 @@ const env = {
     senderEmail: process.env.BREVO_SENDER_EMAIL || process.env.MAIL_FROM_EMAIL || 'no-reply@bookify.app',
     senderName: process.env.BREVO_SENDER_NAME || 'Bookify',
   },
+  firebase: {
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    /* Private keys are stored as one line in env vars — restore newlines here. */
+    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+  },
 };
 
 env.isProd = env.nodeEnv === 'production';
@@ -31,5 +37,8 @@ env.hasCloudinary = Boolean(
 );
 env.hasRazorpay = Boolean(env.razorpay.keyId && env.razorpay.keySecret);
 env.hasMail = Boolean(env.brevo.apiKey && env.brevo.senderEmail);
+env.hasFirebase = Boolean(
+  env.firebase.projectId && env.firebase.clientEmail && env.firebase.privateKey,
+);
 
 export default env;

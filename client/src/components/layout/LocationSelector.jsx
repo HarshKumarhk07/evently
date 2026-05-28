@@ -12,7 +12,6 @@ import { cn } from '../../lib/cn.js';
 /* A small lucide icon per popular city — gives the grid the visual variety
    the District-style picker has, without bundling custom illustrations. */
 const CITY_ICON = {
-  'Abu Dhabi':  Building2,
   Ahmedabad:    Landmark,
   Bengaluru:    Landmark,
   Chandigarh:   Landmark,

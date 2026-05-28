@@ -50,6 +50,8 @@ const eventSchema = new mongoose.Schema(
     tags: [{ type: String }],
     isFeatured: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
+    /* The manager who owns this listing — see Restaurant.js for semantics. */
+    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
   },
   { timestamps: true },
 );

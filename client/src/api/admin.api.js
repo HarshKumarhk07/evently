@@ -8,4 +8,11 @@ export const adminApi = {
   bookings: (params = {}) => api.get('/admin/bookings', { params }).then((r) => r.data),
   updateBooking: (id, status) =>
     api.patch(`/admin/bookings/${id}`, { status }).then((r) => r.data),
+
+  /* Manager approval queue */
+  managers: (params = {}) => api.get('/admin/managers', { params }).then((r) => r.data),
+  getManager: (id) => api.get(`/admin/managers/${id}`).then((r) => r.data),
+  approveManager: (id) => api.post(`/admin/managers/${id}/approve`).then((r) => r.data),
+  rejectManager: (id, reason) =>
+    api.post(`/admin/managers/${id}/reject`, { reason }).then((r) => r.data),
 };

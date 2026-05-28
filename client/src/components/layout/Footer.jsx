@@ -20,6 +20,13 @@ const columns = [
     ],
   },
   {
+    title: 'For partners',
+    links: [
+      { label: 'List your business', to: '/list-your-business' },
+      { label: 'Partner login', to: '/login' },
+    ],
+  },
+  {
     title: 'Support',
     links: [
       { label: 'Help Centre', to: '/' },
@@ -34,7 +41,7 @@ const socials = [Instagram, Twitter, Youtube, Mail];
 export default function Footer() {
   return (
     <footer className="mt-24 border-t border-white/[0.06] bg-ink-900/60">
-      <div className="section grid grid-cols-2 gap-10 py-14 md:grid-cols-5">
+      <div className="section grid grid-cols-2 gap-10 py-14 md:grid-cols-3 lg:grid-cols-6">
         <div className="col-span-2">
           <Logo />
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-500">

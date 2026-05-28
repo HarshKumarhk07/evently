@@ -10,8 +10,9 @@ export function created(res, data = null, message = 'Created') {
 /**
  * Paginated list envelope.
  * @param {object} meta { page, limit, total }
+ * @param {object} extras additional fields merged into `data` (e.g. counters)
  */
-export function paginated(res, items, meta, message = 'Success') {
+export function paginated(res, items, meta, message = 'Success', extras = {}) {
   const { page, limit, total } = meta;
   return res.status(200).json({
     success: true,
@@ -25,6 +26,7 @@ export function paginated(res, items, meta, message = 'Success') {
         pages: Math.max(1, Math.ceil(total / limit)),
         hasMore: page * limit < total,
       },
+      ...extras,
     },
   });
 }

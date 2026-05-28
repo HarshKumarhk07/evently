@@ -1,12 +1,16 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Store, CalendarRange, Users, ShieldCheck } from 'lucide-react';
+import {
+  LayoutDashboard, Store, CalendarRange, Users, ShieldCheck, Briefcase, MapPin,
+} from 'lucide-react';
 import { cn } from '../../lib/cn.js';
 
 const links = [
   { to: '/admin', label: 'Analytics', icon: LayoutDashboard, end: true },
+  { to: '/admin/managers', label: 'Managers', icon: Briefcase },
   { to: '/admin/listings', label: 'Listings', icon: Store },
   { to: '/admin/bookings', label: 'Bookings', icon: CalendarRange },
   { to: '/admin/users', label: 'Users', icon: Users },
+  { to: '/admin/cities', label: 'Cities', icon: MapPin },
 ];
 
 const linkClass = ({ isActive }) =>

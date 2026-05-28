@@ -1,7 +1,6 @@
 /* Cities surfaced in the rich location picker — name + coordinates so
    "Use Current Location" can pick the nearest one. */
 export const POPULAR_CITIES = [
-  { name: 'Abu Dhabi',  lat: 24.4539, lng: 54.3773 },
   { name: 'Ahmedabad',  lat: 23.0225, lng: 72.5714 },
   { name: 'Bengaluru',  lat: 12.9716, lng: 77.5946 },
   { name: 'Chandigarh', lat: 30.7333, lng: 76.7794 },

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authApi } from '../api/auth.api.js';
 import { tokenStore } from '../lib/axios.js';
+import { signInWithGoogle, signOutFromFirebase } from '../lib/firebase.js';
 
 const AuthContext = createContext(null);
 
@@ -44,12 +45,27 @@ export function AuthProvider({ children }) {
     return u;
   }, []);
 
+  /* Firebase Google flow:
+       1. Pop the Google chooser → get a Firebase ID token
+       2. Exchange it on our backend for the same JWT email users get
+       3. From here the session is identical to any other login */
+  const loginWithGoogle = useCallback(async () => {
+    const idToken = await signInWithGoogle();
+    const { token, user: u } = await authApi.google(idToken);
+    tokenStore.set(token);
+    setUser(u);
+    return u;
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
     } catch {
       /* best-effort — clear locally regardless */
     }
+    /* Make sure the Firebase session is also cleared so the next Google
+       sign-in shows the account chooser. */
+    await signOutFromFirebase();
     tokenStore.clear();
     setUser(null);
   }, []);
@@ -64,10 +80,19 @@ export function AuthProvider({ children }) {
     loading,
     isAuthenticated: Boolean(user),
     isAdmin: user?.role === 'admin',
+    isManager: user?.role === 'manager',
+    /* True only when the manager has been fully approved by an admin — used
+       to gate access to listing-management UI. */
+    isApprovedManager:
+      user?.role === 'manager' && user?.managerProfile?.status === 'approved',
     login,
     register,
+    loginWithGoogle,
     logout,
     patchUser,
+    /* Lets pages refresh the cached user after state-changing flows
+       (e.g. after verifying email or being approved). */
+    setUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

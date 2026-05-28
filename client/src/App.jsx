@@ -15,6 +15,9 @@ const SignupPage = lazy(() => import('./pages/auth/SignupPage.jsx'));
 const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage.jsx'));
 const BookingConfirmationPage = lazy(() => import('./pages/BookingConfirmationPage.jsx'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage.jsx'));
+const ListYourBusinessPage = lazy(() => import('./pages/ListYourBusinessPage.jsx'));
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage.jsx'));
+const ManagerDashboard = lazy(() => import('./pages/manager/ManagerDashboard.jsx'));
 
 const DashboardLayout = lazy(() => import('./components/dashboard/DashboardLayout.jsx'));
 const DashboardHome = lazy(() => import('./pages/dashboard/DashboardHome.jsx'));
@@ -28,6 +31,7 @@ const ManageListingsPage = lazy(() => import('./pages/admin/ManageListingsPage.j
 const ManageBookingsPage = lazy(() => import('./pages/admin/ManageBookingsPage.jsx'));
 const ManageUsersPage = lazy(() => import('./pages/admin/ManageUsersPage.jsx'));
 const ManageCitiesPage = lazy(() => import('./pages/admin/ManageCitiesPage.jsx'));
+const ManageManagersPage = lazy(() => import('./pages/admin/ManageManagersPage.jsx'));
 
 export default function App() {
   return (
@@ -53,10 +57,22 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
 
           {/* Main app shell */}
           <Route element={<Layout />}>
             <Route index element={<HomePage />} />
+
+            <Route path="list-your-business" element={<ListYourBusinessPage />} />
+
+            <Route
+              path="manager"
+              element={
+                <ProtectedRoute managerOnly>
+                  <ManagerDashboard />
+                </ProtectedRoute>
+              }
+            />
 
             <Route path="dining" element={<ListingPage vertical="dining" />} />
             <Route path="dining/:slug" element={<DetailPage vertical="dining" />} />
@@ -103,6 +119,7 @@ export default function App() {
               <Route path="bookings" element={<ManageBookingsPage />} />
               <Route path="users" element={<ManageUsersPage />} />
               <Route path="cities" element={<ManageCitiesPage />} />
+              <Route path="managers" element={<ManageManagersPage />} />
             </Route>
 
             <Route path="*" element={<NotFoundPage />} />

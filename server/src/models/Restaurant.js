@@ -46,6 +46,10 @@ const restaurantSchema = new mongoose.Schema(
     tags: [{ type: String }],
     isFeatured: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
+    /* The manager who owns this listing — admins can edit anything, managers
+       can only edit listings where `owner` matches their user id. Legacy seeded
+       listings are owner-less and treated as admin-owned. */
+    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
   },
   { timestamps: true },
 );

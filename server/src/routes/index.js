@@ -9,6 +9,7 @@ import userRoutes from './user.routes.js';
 import adminRoutes from './admin.routes.js';
 import cityRoutes from './city.routes.js';
 import geocodeRoutes from './geocode.routes.js';
+import managerRoutes from './manager.routes.js';
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use('/users', userRoutes);
 router.use('/admin', adminRoutes);
 router.use('/cities', cityRoutes);
 router.use('/geocode', geocodeRoutes);
+router.use('/managers', managerRoutes);
 
 export default router;

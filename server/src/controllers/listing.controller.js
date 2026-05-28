@@ -123,6 +123,15 @@ export function createListingController(Model, typeName) {
     return ok(res, items);
   });
 
+  /* Internal helper: true when the caller is either the listing's owner or
+     an admin. Admins always pass; managers only pass for their own listings. */
+  function canMutate(item, user) {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    if (!item.owner) return false;
+    return String(item.owner) === String(user._id);
+  }
+
   const create = asyncHandler(async (req, res) => {
     const payload = { ...req.body };
 
@@ -141,22 +150,37 @@ export function createListingController(Model, typeName) {
       ];
     }
 
+    /* Auto-attach ownership unless the caller is an admin explicitly creating
+       on behalf of someone else (in which case they supply `owner` in the body). */
+    if (!payload.owner) payload.owner = req.user._id;
+
     const item = await Model.create(payload);
     return created(res, item, `${typeName} created`);
   });
 
   const update = asyncHandler(async (req, res) => {
-    const item = await Model.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-    if (!item) throw ApiError.notFound(`${typeName} not found`);
-    return ok(res, item, `${typeName} updated`);
+    const existing = await Model.findById(req.params.id);
+    if (!existing) throw ApiError.notFound(`${typeName} not found`);
+    if (!canMutate(existing, req.user)) {
+      throw ApiError.forbidden('You can only edit listings you own');
+    }
+
+    /* Managers cannot transfer ownership — strip the field. */
+    const payload = { ...req.body };
+    if (req.user.role !== 'admin') delete payload.owner;
+
+    Object.assign(existing, payload);
+    await existing.save();
+    return ok(res, existing, `${typeName} updated`);
   });
 
   const remove = asyncHandler(async (req, res) => {
-    const item = await Model.findByIdAndDelete(req.params.id);
-    if (!item) throw ApiError.notFound(`${typeName} not found`);
+    const existing = await Model.findById(req.params.id);
+    if (!existing) throw ApiError.notFound(`${typeName} not found`);
+    if (!canMutate(existing, req.user)) {
+      throw ApiError.forbidden('You can only delete listings you own');
+    }
+    await existing.deleteOne();
     return ok(res, null, `${typeName} deleted`);
   });
 

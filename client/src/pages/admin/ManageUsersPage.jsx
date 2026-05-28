@@ -82,7 +82,9 @@ export default function ManageUsersPage() {
           <EmptyState title="No users found" />
         ) : (
           <div className="divide-y divide-white/[0.04]">
-            {users.map((u) => (
+            {(() => {
+              const hasAdmin = users.some((x) => x.role === 'admin');
+              return users.map((u) => (
               <div key={u._id} className="flex items-center gap-3 p-3.5">
                 <Avatar name={u.name} src={u.avatar?.url} size="md" />
                 <div className="min-w-0 flex-1">
@@ -96,9 +98,17 @@ export default function ManageUsersPage() {
                 </div>
                 {u._id !== currentUser._id && (
                   <>
-                    <Button variant="secondary" size="sm" onClick={() => toggleRole(u)}>
-                      {u.role === 'admin' ? 'Make user' : 'Make admin'}
-                    </Button>
+                    {u.role === 'admin' ? (
+                      <Button variant="secondary" size="sm" onClick={() => toggleRole(u)}>
+                        Make user
+                      </Button>
+                    ) : (
+                      !hasAdmin && (
+                        <Button variant="secondary" size="sm" onClick={() => toggleRole(u)}>
+                          Make admin
+                        </Button>
+                      )
+                    )}
                     <button
                       onClick={() => setToDelete(u)}
                       className="rounded-lg p-2 text-red-400 transition-colors hover:bg-red-500/10"
@@ -109,7 +119,8 @@ export default function ManageUsersPage() {
                   </>
                 )}
               </div>
-            ))}
+              ));
+            })()}
           </div>
         )}
       </div>

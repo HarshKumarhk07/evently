@@ -3,11 +3,19 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { PageLoader } from '../ui/Spinner.jsx';
 
 /**
- * Gates a route behind authentication (and optionally an admin role).
+ * Gates a route behind authentication, optionally a specific role.
  * Redirects to /login, preserving the intended destination.
+ *
+ *   adminOnly   – only the admin role passes
+ *   managerOnly – only manager *or* admin roles pass (admins can view
+ *                 manager surfaces for support reasons)
  */
-export default function ProtectedRoute({ children, adminOnly = false }) {
-  const { isAuthenticated, isAdmin, loading } = useAuth();
+export default function ProtectedRoute({
+  children,
+  adminOnly = false,
+  managerOnly = false,
+}) {
+  const { isAuthenticated, isAdmin, isManager, loading } = useAuth();
   const location = useLocation();
 
   if (loading) return <PageLoader label="Checking your session" />;
@@ -17,6 +25,10 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
   }
 
   if (adminOnly && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (managerOnly && !isManager && !isAdmin) {
     return <Navigate to="/" replace />;
   }
 

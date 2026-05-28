@@ -11,7 +11,10 @@
       "Bash(npm start *)",
       "Bash(node -e ' *)",
       "Bash(MONGO_URI=\"mongodb://127.0.0.1:27017/district\" node src/server.js)",
-      "Bash(PORT=5051 MONGO_URI=\"mongodb://127.0.0.1:27017/district\" node src/server.js)"
+      "Bash(PORT=5051 MONGO_URI=\"mongodb://127.0.0.1:27017/district\" node src/server.js)",
+      "Bash(PORT=5061 MONGO_URI=\"mongodb://127.0.0.1:27017/bookify\" node src/server.js)",
+      "Bash(PORT=5083 MONGO_URI=\"mongodb://127.0.0.1:27017/bookify\" node src/server.js)",
+      "Bash(MONGO_URI=mongodb://127.0.0.1:27017/bookify node -e ' *)"
     ]
   }
 }

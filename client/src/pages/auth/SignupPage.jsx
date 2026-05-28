@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Lock, Phone } from 'lucide-react';
+import { User, Mail, Lock, Phone, Briefcase, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AuthLayout from '../../components/auth/AuthLayout.jsx';
+import GoogleButton from '../../components/auth/GoogleButton.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { Input, Select } from '../../components/ui/Input.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -61,6 +62,17 @@ export default function SignupPage() {
         </>
       }
     >
+      <GoogleButton
+        label="Sign up with Google"
+        onSuccess={() => navigate('/dashboard', { replace: true })}
+      />
+
+      <div className="my-5 flex items-center gap-3">
+        <span className="h-px flex-1 bg-ink-600" />
+        <span className="text-xs uppercase tracking-wider text-slate-500">or</span>
+        <span className="h-px flex-1 bg-ink-600" />
+      </div>
+
       <form onSubmit={submit} className="space-y-4">
         <Input
           label="Full name"
@@ -107,6 +119,26 @@ export default function SignupPage() {
           Create account
         </Button>
       </form>
+
+      {/* Business partner CTA — this is how prospective managers discover
+          the partner program, replacing the previous navbar link. */}
+      <Link
+        to="/list-your-business"
+        className="mt-6 flex items-center gap-3 rounded-2xl border border-brand-500/30 bg-brand-500/10 p-4 transition-colors hover:border-brand-400 hover:bg-brand-500/15"
+      >
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-gradient text-white">
+          <Briefcase className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-white">
+            Sign up as a business associate
+          </span>
+          <span className="block text-xs text-brand-200/80">
+            Run a restaurant, turf, event or play? List on Bookify.
+          </span>
+        </span>
+        <ArrowRight className="h-4 w-4 shrink-0 text-brand-300" />
+      </Link>
     </AuthLayout>
   );
 }

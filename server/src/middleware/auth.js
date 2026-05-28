@@ -34,10 +34,27 @@ export const restrictTo =
   (...roles) =>
   (req, _res, next) => {
     if (!roles.includes(req.user.role)) {
-      return next(ApiError.forbidden('This action is restricted to administrators'));
+      return next(ApiError.forbidden('You do not have permission for this action'));
     }
     return next();
   };
+
+/* For listing-mutation routes: admins always pass; managers pass only when
+   their account is approved. Use after `protect`. */
+export const requireApprovedManagerOrAdmin = (req, _res, next) => {
+  const { user } = req;
+  if (!user) return next(ApiError.unauthorized());
+  if (user.role === 'admin') return next();
+  if (user.role === 'manager' && user.managerProfile?.status === 'approved') {
+    return next();
+  }
+  if (user.role === 'manager') {
+    return next(
+      ApiError.forbidden('Your manager account is not approved yet — please wait for admin review'),
+    );
+  }
+  return next(ApiError.forbidden('This action is restricted to managers and admins'));
+};
 
 /* Attaches req.user when a token is present but never blocks the request. */
 export const optionalAuth = asyncHandler(async (req, _res, next) => {

@@ -84,4 +84,49 @@ export const emailService = {
          <p>Amount paid: <strong>₹${booking.amount.toLocaleString('en-IN')}</strong></p>`,
       ),
     }),
+
+  /* Manager flows ───────────────────────────────────────────────────── */
+
+  sendEmailVerification: (user, verifyUrl) =>
+    send({
+      to: user.email,
+      subject: 'Verify your Bookify email',
+      html: shell(
+        'Verify your email',
+        `<p>Hi ${user.name.split(' ')[0]}, please confirm your email address so we can
+         continue with your manager application.</p>
+         <p style="margin:28px 0">
+           <a href="${verifyUrl}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;padding:12px 22px;border-radius:12px;font-weight:600;text-decoration:none">
+             Verify email
+           </a>
+         </p>
+         <p style="font-size:12px;color:#7a7395">If the button doesn't work, paste this URL into your browser:<br/>
+         <span style="word-break:break-all">${verifyUrl}</span></p>
+         <p style="font-size:12px;color:#7a7395">This link expires in 24 hours.</p>`,
+      ),
+    }),
+
+  sendManagerApproved: (user) =>
+    send({
+      to: user.email,
+      subject: 'Your Bookify manager account is approved 🎉',
+      html: shell(
+        'You\'re in!',
+        `<p>Your manager account for <strong>${user.managerProfile?.businessName || user.name}</strong> has been approved.</p>
+         <p>You can now sign in and start listing on Bookify.</p>`,
+      ),
+    }),
+
+  sendManagerRejected: (user, reason) =>
+    send({
+      to: user.email,
+      subject: 'Update on your Bookify manager application',
+      html: shell(
+        'Application update',
+        `<p>Thanks for applying to be a Bookify manager. After review we are unable to
+         approve your account at this time.</p>
+         ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
+         <p>You're welcome to update your details and re-apply.</p>`,
+      ),
+    }),
 };

@@ -19,6 +19,14 @@ export function hashToken(value) {
   return crypto.createHash('sha256').update(value).digest('hex');
 }
 
+/* URL-safe random token used in email-verification links.
+   Returns { token, hash } — store the hash, mail the raw token. */
+export function generateVerificationToken() {
+  const token = crypto.randomBytes(32).toString('hex');
+  const hash = hashToken(token);
+  return { token, hash };
+}
+
 /* Cookie options shared by login / logout. */
 export function cookieOptions() {
   return {

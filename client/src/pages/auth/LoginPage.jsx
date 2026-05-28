@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AuthLayout from '../../components/auth/AuthLayout.jsx';
+import GoogleButton from '../../components/auth/GoogleButton.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { Input } from '../../components/ui/Input.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -22,7 +23,14 @@ export default function LoginPage() {
     try {
       const user = await login(form);
       toast.success(`Welcome back, ${user.name.split(' ')[0]}`);
-      navigate(user.role === 'admin' ? '/admin' : redirectTo, { replace: true });
+      /* Route by role so each persona lands on the right surface. */
+      const dest =
+        user.role === 'admin'
+          ? '/admin'
+          : user.role === 'manager'
+            ? '/manager'
+            : redirectTo;
+      navigate(dest, { replace: true });
     } catch (err) {
       toast.error(err.message || 'Login failed');
     } finally {
@@ -43,6 +51,24 @@ export default function LoginPage() {
         </>
       }
     >
+      <GoogleButton
+        onSuccess={(u) => {
+          const dest =
+            u.role === 'admin'
+              ? '/admin'
+              : u.role === 'manager'
+                ? '/manager'
+                : redirectTo;
+          navigate(dest, { replace: true });
+        }}
+      />
+
+      <div className="my-5 flex items-center gap-3">
+        <span className="h-px flex-1 bg-ink-600" />
+        <span className="text-xs uppercase tracking-wider text-slate-500">or</span>
+        <span className="h-px flex-1 bg-ink-600" />
+      </div>
+
       <form onSubmit={submit} className="space-y-4">
         <Input
           label="Email"

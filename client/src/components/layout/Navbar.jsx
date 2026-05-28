@@ -20,7 +20,7 @@ const navLinkClass = ({ isActive }) =>
 
 /* Sticky, blur-on-scroll navbar — the spec's three verticals only. */
 export default function Navbar() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isManager } = useAuth();
   const scrolled = useScrolled(16);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -66,6 +66,16 @@ export default function Navbar() {
 
           {/* Right — search + auth */}
           <div className="flex items-center gap-2">
+            {/* Managers see a direct shortcut to their console. Prospective
+                partners discover the program on the signup page / footer. */}
+            {isManager && (
+              <Link
+                to="/manager"
+                className="hidden whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold text-brand-300 transition-colors hover:text-brand-200 lg:inline-flex"
+              >
+                Manager dashboard
+              </Link>
+            )}
             <button
               onClick={() => setSearchOpen(true)}
               aria-label="Search"
@@ -108,7 +118,7 @@ export default function Navbar() {
 
 /* Slide-in drawer for small screens. */
 function MobileMenu({ open, onClose }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isManager } = useAuth();
 
   return (
     <AnimatePresence>
@@ -164,6 +174,11 @@ function MobileMenu({ open, onClose }) {
             </div>
 
             <div className="mt-auto flex flex-col gap-2" onClick={onClose}>
+              {isManager && (
+                <Button as={Link} to="/manager" variant="secondary" fullWidth>
+                  Manager dashboard
+                </Button>
+              )}
               {isAuthenticated ? (
                 <>
                   <Button as={Link} to="/dashboard" variant="secondary" fullWidth>

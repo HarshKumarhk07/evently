@@ -26,6 +26,15 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = tokenStore.get();
   if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  /* When the body is FormData we must let axios + the browser generate the
+     `Content-Type: multipart/form-data; boundary=…` header themselves —
+     manually setting it (as some callers do) drops the boundary and the
+     server fails to parse the multipart body. */
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+    delete config.headers['content-type'];
+  }
   return config;
 });
 

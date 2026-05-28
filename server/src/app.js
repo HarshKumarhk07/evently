@@ -20,7 +20,7 @@ app.set('trust proxy', 1);
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(
   cors({
-    origin: [env.clientUrl, 'http://localhost:5173'],
+    origin: [env.clientUrl, 'http://localhost:5173', 'https://evently-five-ivory.vercel.app'],
     credentials: true,
   }),
 );
