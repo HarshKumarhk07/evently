@@ -31,26 +31,12 @@ const HERO = {
   plays: {
     title: 'Plays',
     subtitle: 'Drama, comedy and classics staged across the city’s finest theatres.',
-    image: makeArtImage({
-      theme: 'plays',
-      title: 'Plays',
-      subtitle: 'Drama, comedy and classics',
-      seed: 'hero-plays',
-      width: 1600,
-      height: 500,
-    }),
+    image: '/play%20cover.jpg',
   },
   events: {
     title: 'Events',
     subtitle: 'Concerts, comedy, festivals and workshops — all in one place.',
-    image: makeArtImage({
-      theme: 'events',
-      title: 'Events',
-      subtitle: 'Concerts, comedy and festivals',
-      seed: 'hero-events',
-      width: 1600,
-      height: 500,
-    }),
+    image: '/eventCover.jpg',
   },
 };
 

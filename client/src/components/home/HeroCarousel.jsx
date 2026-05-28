@@ -8,9 +8,15 @@ import { cn } from '../../lib/cn.js';
 /* Auto-advancing banner carousel for the home hero. */
 export default function HeroCarousel({ slides = [] }) {
   const [index, setIndex] = useState(0);
+  const [src, setSrc] = useState('');
   const count = slides.length;
 
   const go = useCallback((dir) => setIndex((i) => (i + dir + count) % count), [count]);
+
+  useEffect(() => {
+    const slide = slides[index];
+    setSrc(slide?.image || slide?.fallbackImage || '');
+  }, [index, slides]);
 
   useEffect(() => {
     if (count < 2) return undefined;
@@ -33,7 +39,16 @@ export default function HeroCarousel({ slides = [] }) {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.7, ease: 'easeOut' }}
         >
-          <img src={slide.image} alt="" className="h-full w-full object-cover" />
+          <img
+            src={src}
+            alt=""
+            className="h-full w-full object-cover"
+            onError={() => {
+              if (slide?.fallbackImage && src !== slide.fallbackImage) {
+                setSrc(slide.fallbackImage);
+              }
+            }}
+          />
           <div className="absolute inset-0 bg-gradient-to-r from-ink-950 via-ink-950/80 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-t from-ink-950/90 to-transparent" />
         </motion.div>

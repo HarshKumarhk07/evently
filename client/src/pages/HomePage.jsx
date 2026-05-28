@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, TrendingUp, Drama, CalendarClock } from 'lucide-react';
 import HeroCarousel from '../components/home/HeroCarousel.jsx';
 import HeroSearch from '../components/home/HeroSearch.jsx';
 import VerticalCards from '../components/home/VerticalCards.jsx';
@@ -12,13 +11,6 @@ import { usersApi } from '../api/users.api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { titleOf, REFTYPE_TO_VERTICAL } from '../lib/listings.js';
 import { useLocation } from '../context/LocationContext.jsx';
-
-const STATS = [
-  { value: '1,200+', label: 'Venues & experiences' },
-  { value: '40k+', label: 'Bookings made' },
-  { value: '4.8★', label: 'Average rating' },
-  { value: '4', label: 'Cities live' },
-];
 
 export default function HomePage() {
   const { user, isAuthenticated } = useAuth();
@@ -60,6 +52,14 @@ export default function HomePage() {
   const slides = [
     data.dining[0] && {
       image: data.dining[0].coverImage,
+      fallbackImage: makeArtImage({
+        theme: 'dining',
+        title: titleOf(data.dining[0]),
+        subtitle: data.dining[0].city,
+        seed: data.dining[0].slug || data.dining[0]._id,
+        width: 1600,
+        height: 900,
+      }),
       eyebrow: 'Featured Dining',
       title: titleOf(data.dining[0]),
       subtitle: data.dining[0].description,
@@ -67,6 +67,14 @@ export default function HomePage() {
     },
     data.events[0] && {
       image: data.events[0].coverImage,
+      fallbackImage: makeArtImage({
+        theme: 'events',
+        title: titleOf(data.events[0]),
+        subtitle: data.events[0].city,
+        seed: data.events[0].slug || data.events[0]._id,
+        width: 1600,
+        height: 900,
+      }),
       eyebrow: 'Live Events',
       title: titleOf(data.events[0]),
       subtitle: data.events[0].description,
@@ -74,6 +82,14 @@ export default function HomePage() {
     },
     data.plays[0] && {
       image: data.plays[0].coverImage,
+      fallbackImage: makeArtImage({
+        theme: 'plays',
+        title: titleOf(data.plays[0]),
+        subtitle: data.plays[0].city,
+        seed: data.plays[0].slug || data.plays[0]._id,
+        width: 1600,
+        height: 900,
+      }),
       eyebrow: 'On Stage',
       title: titleOf(data.plays[0]),
       subtitle: data.plays[0].description,
@@ -92,10 +108,6 @@ export default function HomePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-500/30 bg-brand-500/10 px-3 py-1 text-xs font-semibold text-brand-200">
-              <Sparkles className="h-3.5 w-3.5" />
-              Your city, beautifully curated
-            </span>
             <h1 className="mt-4 font-display text-4xl font-extrabold leading-[1.1] text-white sm:text-5xl lg:text-6xl">
               Discover the best of <span className="text-gradient">dining, plays</span> &amp;
               events
@@ -113,6 +125,7 @@ export default function HomePage() {
             initial={{ opacity: 0, scale: 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, delay: 0.1 }}
+            className="hidden lg:block"
           >
             <HeroCarousel slides={slides} />
           </motion.div>
@@ -174,59 +187,6 @@ export default function HomePage() {
         <ListingRow vertical="events" items={data.events} loading={loading} />
       </section>
 
-      {/* Stats band */}
-      <section className="section mt-20">
-        <div className="relative overflow-hidden rounded-3xl border border-white/[0.06] bg-mesh p-8 sm:p-12">
-          <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
-            {STATS.map((stat, i) => (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.08 }}
-                className="text-center"
-              >
-                <p className="font-display text-3xl font-extrabold text-white sm:text-4xl">
-                  {stat.value}
-                </p>
-                <p className="mt-1 text-sm text-slate-400">{stat.label}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Why Bookify */}
-      <section className="section mt-16">
-        <div className="grid gap-5 sm:grid-cols-3">
-          {[
-            {
-              icon: TrendingUp,
-              title: 'Curated, not crowded',
-              text: 'Every venue is hand-picked and reviewed by a real community.',
-            },
-            {
-              icon: Drama,
-              title: 'Seamless booking',
-              text: 'Tables, seats and tickets — confirmed in seconds, not queues.',
-            },
-            {
-              icon: CalendarClock,
-              title: 'Never miss out',
-              text: 'Live availability, countdowns and reminders for what matters.',
-            },
-          ].map((f) => (
-            <div key={f.title} className="card p-6">
-              <div className="mb-3 grid h-11 w-11 place-items-center rounded-xl bg-brand-500/15 text-brand-300">
-                <f.icon className="h-5 w-5" />
-              </div>
-              <h3 className="font-display text-lg font-semibold text-white">{f.title}</h3>
-              <p className="mt-1.5 text-sm text-slate-400">{f.text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }

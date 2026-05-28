@@ -7,6 +7,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useLocation } from '../../context/LocationContext.jsx';
+import api from '../../lib/axios.js';
 import { cn } from '../../lib/cn.js';
 
 /* A small lucide icon per popular city — gives the grid the visual variety
@@ -47,6 +48,12 @@ function pickNearestCityFromList(list = [], lat, lng) {
     }
   }
   return best?.cityName || null;
+}
+
+function findCityByName(list = [], rawName) {
+  const name = String(rawName || '').trim().toLowerCase();
+  if (!name) return null;
+  return list.find((c) => c.cityName?.trim().toLowerCase() === name) || null;
 }
 
 /* City picker shown on the left of the navbar. */
@@ -121,7 +128,15 @@ export default function LocationSelector() {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         try {
-          const found = await detectNearest(position.coords.latitude, position.coords.longitude);
+          const { latitude, longitude } = position.coords;
+          const reverse = await api.get('/geocode/reverse', {
+            params: { lat: latitude, lng: longitude },
+          });
+          const address = reverse?.data?.address || {};
+          const reverseCity =
+            address.city || address.town || address.village || address.municipality || address.suburb;
+          const cityMatch = findCityByName(cities, reverseCity);
+          const found = cityMatch || (await detectNearest(latitude, longitude));
           setDetecting(false);
           if (found) {
             setCity(found);
@@ -130,7 +145,7 @@ export default function LocationSelector() {
             return;
           }
           // fallback to client-side nearest
-          const f = pickNearestCityFromList(cities, position.coords.latitude, position.coords.longitude);
+          const f = pickNearestCityFromList(cities, latitude, longitude);
           if (f) select(f);
         } catch (err) {
           setDetecting(false);
@@ -141,7 +156,7 @@ export default function LocationSelector() {
         setDetecting(false);
         toast.error('Could not detect your location');
       },
-      { enableHighAccuracy: false, timeout: 8000 },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
     );
   };
 

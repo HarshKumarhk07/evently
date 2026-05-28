@@ -1,7 +1,9 @@
-import { useState, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Ticket, Heart, User, Shield, LogOut, ChevronDown } from 'lucide-react';
+import {
+  LayoutDashboard, Ticket, Heart, User, Shield, LogOut, ChevronDown, Briefcase,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import Avatar from '../ui/Avatar.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -16,11 +18,16 @@ const items = [
 
 /* Avatar dropdown with account navigation and logout. */
 export default function ProfileMenu() {
-  const { user, isAdmin, logout } = useAuth();
+  const { user, isAdmin, isManager, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
   useOnClickOutside(ref, () => setOpen(false));
+
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname]);
 
   const handleLogout = async () => {
     await logout();
@@ -67,6 +74,16 @@ export default function ProfileMenu() {
                   {item.label}
                 </Link>
               ))}
+              {isManager && (
+                <Link
+                  to="/manager"
+                  role="menuitem"
+                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-brand-300 transition-colors hover:bg-brand-500/10"
+                >
+                  <Briefcase className="h-4 w-4" />
+                  Manager Console
+                </Link>
+              )}
               {isAdmin && (
                 <Link
                   to="/admin"

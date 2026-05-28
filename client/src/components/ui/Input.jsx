@@ -90,7 +90,7 @@ export const Textarea = forwardRef(function Textarea(
 });
 
 export const Select = forwardRef(function Select(
-  { label, error, options = [], className, id, ...props },
+  { label, error, options = [], className, id, icon: Icon, ...props },
   ref,
 ) {
   const autoId = useId();
@@ -102,18 +102,31 @@ export const Select = forwardRef(function Select(
           {label}
         </label>
       )}
-      <select
-        ref={ref}
-        id={inputId}
-        className={cn('input-base cursor-pointer', error && 'border-red-500/70', className)}
-        {...props}
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value} className="bg-ink-800">
-            {opt.label}
-          </option>
-        ))}
-      </select>
+      <div className="relative">
+        {Icon && (
+          <Icon
+            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+            aria-hidden
+          />
+        )}
+        <select
+          ref={ref}
+          id={inputId}
+          className={cn(
+            'input-base cursor-pointer',
+            Icon && 'pl-10',
+            error && 'border-red-500/70',
+            className,
+          )}
+          {...props}
+        >
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value} className="bg-ink-800">
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
       {error && <p className="mt-1.5 text-xs text-red-400">{error}</p>}
     </div>
   );

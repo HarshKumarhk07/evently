@@ -184,7 +184,7 @@ export default function ListYourBusinessPage() {
         setLocating(false);
         toast.error('Could not detect your location');
       },
-      { enableHighAccuracy: false, timeout: 8000 },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
     );
   };
 

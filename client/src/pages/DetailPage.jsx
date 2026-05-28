@@ -21,6 +21,7 @@ import MapView from '../components/common/MapView.jsx';
 import { listingApiFor } from '../api/listings.api.js';
 import { VERTICAL_CONFIG, titleOf } from '../lib/listings.js';
 import { formatCurrency, formatDateTime } from '../lib/format.js';
+import { makeArtImage } from '../lib/visuals.js';
 
 /* Card wrapper for a content block. */
 function Block({ title, icon: Icon, children }) {
@@ -178,6 +179,7 @@ export default function DetailPage({ vertical }) {
   const [similar, setSimilar] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [heroSrc, setHeroSrc] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -198,6 +200,21 @@ export default function DetailPage({ vertical }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, vertical]);
+
+  useEffect(() => {
+    if (!item) return;
+    setHeroSrc(
+      item.coverImage ||
+        makeArtImage({
+          theme: vertical,
+          title: titleOf(item),
+          subtitle: item.city,
+          seed: item.slug || item._id,
+          width: 1600,
+          height: 900,
+        }),
+    );
+  }, [item, vertical]);
 
   const share = async () => {
     try {
@@ -225,7 +242,22 @@ export default function DetailPage({ vertical }) {
     <div className="pb-12">
       {/* Hero */}
       <div className="relative h-[340px] overflow-hidden sm:h-[420px]">
-        <img src={item.coverImage} alt={titleOf(item)} className="h-full w-full object-cover" />
+        <img
+          src={heroSrc}
+          alt={titleOf(item)}
+          className="h-full w-full object-cover"
+          onError={() => {
+            const fallback = makeArtImage({
+              theme: vertical,
+              title: titleOf(item),
+              subtitle: item.city,
+              seed: `${item.slug || item._id}-fallback`,
+              width: 1600,
+              height: 900,
+            });
+            if (heroSrc !== fallback) setHeroSrc(fallback);
+          }}
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/55 to-ink-950/20" />
         <div className="section absolute inset-x-0 bottom-0">
           <Link

@@ -285,77 +285,115 @@ function ListingFormModal({ vertical, mode, item, onClose, onSaved }) {
       open
       onClose={onClose}
       title={`${mode === 'edit' ? 'Edit' : 'New'} ${cfg.label.replace(/s$/, '')}`}
-      size="md"
+      size="xl"
     >
-      <form onSubmit={submit} className="space-y-4">
-        <Input label={vertical === 'dining' ? 'Name' : 'Title'} value={form.name} onChange={set('name')} />
-        <Textarea label="Description" rows={3} value={form.description} onChange={set('description')} />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Select
-            label="City"
-            value={form.cityId || form.city}
-            onChange={(e) => {
-              const v = e.target.value;
-              const found = locationCtx.cities.find((c) => c._id === v || c.cityName === v);
-              setForm({ ...form, city: found ? found.cityName : v, cityId: found ? found._id : '' });
-            }}
-            options={[...locationCtx.cities.map((c) => ({ value: c._id, label: c.cityName })), ...(locationCtx.cities.length===0?[]:[])]}
-          />
-          <Input label="Locality / Area" value={form.locality} onChange={(e) => setForm({ ...form, locality: e.target.value })} />
-          {vertical === 'dining' && (
-            <Input label="Cost for two (₹)" type="number" value={form.costForTwo} onChange={set('costForTwo')} />
-          )}
-          {vertical === 'plays' && (
-            <Input label="Duration (mins)" type="number" value={form.duration} onChange={set('duration')} />
-          )}
-          {vertical === 'events' && (
-            <Select
-              label="Category"
-              value={form.category}
-              onChange={set('category')}
-              options={EVENT_CATEGORIES.map((c) => ({ value: c, label: c }))}
+      <form onSubmit={submit} className="space-y-5">
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+          <p className="text-sm font-semibold text-white">Listing details</p>
+          <p className="mt-1 text-xs text-slate-500">Set the public title and description that people will see first.</p>
+          <div className="mt-4 space-y-4">
+            <Input
+              label={vertical === 'dining' ? 'Restaurant name' : 'Title'}
+              placeholder={vertical === 'dining' ? 'The Copper Table' : 'Summer Nights Concert'}
+              value={form.name}
+              onChange={set('name')}
             />
-          )}
+            <Textarea
+              label="Short description"
+              rows={4}
+              placeholder="Write a short, compelling description for the listing."
+              value={form.description}
+              onChange={set('description')}
+            />
+          </div>
         </div>
 
-        {vertical === 'dining' && (
-          <Input
-            label="Cuisines (comma separated)"
-            value={form.cuisine}
-            onChange={set('cuisine')}
-            placeholder="Italian, Continental"
-          />
-        )}
-        {vertical === 'plays' && (
-          <Input label="Language" value={form.language} onChange={set('language')} />
-        )}
-        {vertical === 'events' && (
-          <Input label="Start date" type="date" value={form.startDate} onChange={set('startDate')} />
-        )}
+        <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="space-y-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <p className="text-sm font-semibold text-white">Location & category</p>
+            <p className="text-xs text-slate-500">Choose the city and optional area for search and discovery.</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Select
+                label="City"
+                value={form.cityId || form.city || ''}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  const found = locationCtx.cities.find((c) => c._id === v || c.cityName === v);
+                  setForm({ ...form, city: found ? found.cityName : v, cityId: found ? found._id : '' });
+                }}
+                options={[
+                  { value: '', label: 'Choose a city' },
+                  ...locationCtx.cities.map((c) => ({ value: c._id, label: c.cityName })),
+                ]}
+              />
+              <Input
+                label="Locality / Area"
+                placeholder="Bandra West, MG Road, etc."
+                value={form.locality}
+                onChange={(e) => setForm({ ...form, locality: e.target.value })}
+              />
+              {vertical === 'dining' && (
+                <Input label="Cost for two (₹)" type="number" placeholder="1500" value={form.costForTwo} onChange={set('costForTwo')} />
+              )}
+              {vertical === 'plays' && (
+                <Input label="Duration (mins)" type="number" placeholder="120" value={form.duration} onChange={set('duration')} />
+              )}
+              {vertical === 'events' && (
+                <Select
+                  label="Category"
+                  value={form.category}
+                  onChange={set('category')}
+                  options={EVENT_CATEGORIES.map((c) => ({ value: c, label: c }))}
+                />
+              )}
+              {vertical === 'dining' && (
+                <Input
+                  label="Cuisines"
+                  value={form.cuisine}
+                  onChange={set('cuisine')}
+                  placeholder="Italian, Continental"
+                  hint="Comma-separated list"
+                />
+              )}
+              {vertical === 'plays' && (
+                <Input label="Language" placeholder="English" value={form.language} onChange={set('language')} />
+              )}
+              {vertical === 'events' && (
+                <Input label="Start date" type="date" value={form.startDate} onChange={set('startDate')} />
+              )}
+            </div>
+          </div>
 
-        <ImageUploader
-          value={form.coverImage}
-          onChange={(url) => setForm((f) => ({ ...f, coverImage: url }))}
-          hint="Uploads to Cloudinary · leave empty for auto-generated artwork"
-        />
+          <div className="space-y-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <p className="text-sm font-semibold text-white">Media & publishing</p>
+            <p className="text-xs text-slate-500">Upload a cover or let the system generate one automatically.</p>
+            <ImageUploader
+              value={form.coverImage}
+              onChange={(url) => setForm((f) => ({ ...f, coverImage: url }))}
+              hint="Uploads to Cloudinary · leave empty for auto-generated artwork"
+            />
 
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Input label="Latitude" value={form.lat || ''} onChange={(e) => setForm({ ...form, lat: e.target.value })} />
-          <Input label="Longitude" value={form.lng || ''} onChange={(e) => setForm({ ...form, lng: e.target.value })} />
-          <Input label="Locality (optional)" value={form.locality || ''} onChange={(e) => setForm({ ...form, locality: e.target.value })} />
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Input label="Latitude" type="number" step="any" placeholder="19.0760" value={form.lat || ''} onChange={(e) => setForm({ ...form, lat: e.target.value })} />
+              <Input label="Longitude" type="number" step="any" placeholder="72.8777" value={form.lng || ''} onChange={(e) => setForm({ ...form, lng: e.target.value })} />
+              <div className="rounded-xl border border-white/[0.06] bg-ink-900/30 px-3 py-2.5 text-xs text-slate-500">
+                Pin the exact location here so maps and nearby search stay accurate.
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2.5 rounded-xl border border-white/[0.06] bg-ink-900/40 px-3 py-2.5 text-sm text-slate-300">
+              <input
+                type="checkbox"
+                checked={form.isFeatured}
+                onChange={set('isFeatured')}
+                className="h-4 w-4 rounded border-ink-600 bg-ink-900 accent-brand-500"
+              />
+              Mark as featured
+            </label>
+          </div>
         </div>
 
-        <label className="flex items-center gap-2.5 text-sm text-slate-300">
-          <input
-            type="checkbox"
-            checked={form.isFeatured}
-            onChange={set('isFeatured')}
-            className="h-4 w-4 rounded border-ink-600 bg-ink-900 accent-brand-500"
-          />
-          Mark as featured
-        </label>
-
-        <div className="flex justify-end gap-3 pt-2">
+        <div className="flex justify-end gap-3 pt-1">
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
           </Button>
