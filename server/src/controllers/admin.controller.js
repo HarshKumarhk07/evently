@@ -161,6 +161,19 @@ export const getManager = asyncHandler(async (req, res) => {
   return ok(res, user);
 });
 
+/* Toggles all listings owned by the given manager. Called when their
+   approval status changes so the public homepage reflects the change. */
+async function toggleManagerListingVisibility(ownerId, isActive) {
+  const filter = { owner: ownerId };
+  const update = { isActive };
+  const [r, p, e] = await Promise.all([
+    Restaurant.updateMany(filter, update),
+    Play.updateMany(filter, update),
+    Event.updateMany(filter, update),
+  ]);
+  return { restaurants: r.modifiedCount, plays: p.modifiedCount, events: e.modifiedCount };
+}
+
 /* POST /api/admin/managers/:id/approve */
 export const approveManager = asyncHandler(async (req, res) => {
   const user = await User.findOne({ _id: req.params.id, role: 'manager' });
@@ -173,6 +186,8 @@ export const approveManager = asyncHandler(async (req, res) => {
   user.managerProfile.rejectionReason = '';
   await user.save({ validateBeforeSave: false });
 
+  /* Make any of their existing listings public again. */
+  await toggleManagerListingVisibility(user._id, true);
   emailService.sendManagerApproved(user).catch(() => {});
   return ok(res, user, 'Manager approved');
 });
@@ -187,8 +202,25 @@ export const rejectManager = asyncHandler(async (req, res) => {
   user.managerProfile.rejectionReason = req.body?.reason || 'No reason provided';
   await user.save({ validateBeforeSave: false });
 
+  /* Hide their listings from the public homepage immediately. */
+  await toggleManagerListingVisibility(user._id, false);
   emailService.sendManagerRejected(user, user.managerProfile.rejectionReason).catch(() => {});
   return ok(res, user, 'Manager rejected');
+});
+
+/* POST /api/admin/email-test — manually send a test email through the
+   configured mail provider. Returns the provider's raw response so you
+   can debug Brevo configuration issues from the admin UI. */
+export const sendTestEmail = asyncHandler(async (req, res) => {
+  const { to, subject, message } = req.body;
+  const html = `<!doctype html><html><body style="font-family:Inter,Arial,sans-serif;background:#0c0a14;padding:32px;color:#e2e0ea">
+    <h2 style="color:#fff">Bookify email test</h2>
+    <p>${message}</p>
+    <p style="color:#7a7395;font-size:12px;margin-top:32px">Sent from the Bookify admin email-test endpoint.</p>
+  </body></html>`;
+  const result = await emailService.send({ to, subject, html });
+  /* Always 200 so the client can render success / failure detail itself. */
+  return ok(res, result, result.ok ? 'Test email sent' : 'Test email failed');
 });
 
 /* PATCH /api/admin/bookings/:id — override a booking status. */

@@ -10,6 +10,7 @@ import adminRoutes from './admin.routes.js';
 import cityRoutes from './city.routes.js';
 import geocodeRoutes from './geocode.routes.js';
 import managerRoutes from './manager.routes.js';
+import env from '../config/env.js';
 
 const router = Router();
 
@@ -28,5 +29,18 @@ router.use('/admin', adminRoutes);
 router.use('/cities', cityRoutes);
 router.use('/geocode', geocodeRoutes);
 router.use('/managers', managerRoutes);
+
+// Development-only mail-check endpoint to inspect mail config and optionally
+// perform a test send. Enabled only when not in production.
+if (!env.isProd) {
+  router.get('/dev/mail-check', (_req, res) =>
+    res.json({
+      success: true,
+      hasMail: env.hasMail,
+      senderEmail: env.brevo.senderEmail,
+      apiKeyPresent: Boolean(env.brevo.apiKey),
+    }),
+  );
+}
 
 export default router;

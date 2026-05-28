@@ -95,6 +95,16 @@ const userSchema = new mongoose.Schema(
     /* Email verification — used by managers (required) and any user that
        wants to confirm their address. */
     isVerified: { type: Boolean, default: false },
+    /* 6-digit OTP — stored hashed, expires after 10 minutes. */
+    emailOTP: { type: String, select: false },
+    emailOTPExpires: { type: Date, select: false },
+    /* Throttle resends so we don't get marked as spam. */
+    emailOTPLastSentAt: { type: Date, select: false },
+    /* Brute-force protection — after N wrong attempts the OTP is wiped and
+       the user must request a fresh code. */
+    emailOTPAttempts: { type: Number, default: 0, select: false },
+    /* Legacy token-link verification (kept for backwards compatibility — the
+       OTP flow above is the canonical one going forward). */
     emailVerificationToken: { type: String, select: false, index: true },
     emailVerificationExpires: { type: Date, select: false },
 
@@ -126,6 +136,10 @@ userSchema.methods.toJSON = function toJSON() {
   delete obj.password;
   delete obj.resetOTP;
   delete obj.resetOTPExpires;
+  delete obj.emailOTP;
+  delete obj.emailOTPExpires;
+  delete obj.emailOTPLastSentAt;
+  delete obj.emailOTPAttempts;
   delete obj.emailVerificationToken;
   delete obj.emailVerificationExpires;
   delete obj.__v;

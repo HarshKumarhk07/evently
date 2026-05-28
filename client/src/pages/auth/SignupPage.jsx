@@ -19,6 +19,7 @@ export default function SignupPage() {
     password: '',
     phone: '',
     city: CITIES[0],
+    confirmPassword: '',
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -30,6 +31,7 @@ export default function SignupPage() {
     if (form.name.trim().length < 2) e.name = 'Enter your full name';
     if (!/^\S+@\S+\.\S+$/.test(form.email)) e.email = 'Enter a valid email';
     if (form.password.length < 6) e.password = 'At least 6 characters';
+    if (form.confirmPassword !== form.password) e.confirmPassword = 'Passwords do not match';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -39,7 +41,8 @@ export default function SignupPage() {
     if (!validate()) return;
     setLoading(true);
     try {
-      const user = await register(form);
+      const { confirmPassword, ...payload } = form;
+      const user = await register(payload);
       toast.success(`Welcome to Bookify, ${user.name.split(' ')[0]}`);
       navigate('/dashboard', { replace: true });
     } catch (err) {
@@ -114,6 +117,15 @@ export default function SignupPage() {
           value={form.password}
           error={errors.password}
           onChange={update('password')}
+        />
+        <Input
+          label="Confirm password"
+          type="password"
+          icon={Lock}
+          placeholder="Re-enter your password"
+          value={form.confirmPassword}
+          error={errors.confirmPassword}
+          onChange={update('confirmPassword')}
         />
         <Button type="submit" fullWidth size="lg" loading={loading}>
           Create account

@@ -20,12 +20,8 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await authApi.forgotPassword(email);
-      toast.success('Verification code sent');
-      if (res?.devOtp) {
-        setOtp(res.devOtp);
-        toast(`Demo code: ${res.devOtp}`, { icon: '🔑' });
-      }
+      await authApi.forgotPassword(email);
+      toast.success('We’ve sent a verification code to your email');
       setStep('verify');
     } catch (err) {
       toast.error(err.message || 'Could not send code');

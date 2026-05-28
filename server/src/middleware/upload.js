@@ -24,13 +24,15 @@ export const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-/* Manager registration: license + ID proof (single each) + up to 6 business
-   images. Files reach the controller on `req.files` keyed by fieldname. */
+/* Manager registration: profile photo + license + ID proof (single each) +
+   up to 6 business images. Files reach the controller on `req.files` keyed
+   by fieldname. */
 export const managerDocsUpload = multer({
   storage,
   fileFilter: imageOrPdfFilter,
-  limits: { fileSize: 8 * 1024 * 1024, files: 10 },
+  limits: { fileSize: 8 * 1024 * 1024, files: 12 },
 }).fields([
+  { name: 'profileImage', maxCount: 1 },
   { name: 'businessLicense', maxCount: 1 },
   { name: 'idProof', maxCount: 1 },
   { name: 'businessImages', maxCount: 6 },

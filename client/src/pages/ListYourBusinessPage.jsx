@@ -1,15 +1,18 @@
-import { useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   User, Mail, Lock, Phone, Building2, IdCard, FileText,
-  Upload, X, ImagePlus, CheckCircle2, ShieldCheck, Briefcase, Crosshair, Loader2,
+  Upload, X, ImagePlus, ShieldCheck, Briefcase, Crosshair, Loader2,
+  MailCheck, RefreshCw,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Button from '../components/ui/Button.jsx';
 import { Input, Textarea, Select } from '../components/ui/Input.jsx';
-import api from '../lib/axios.js';
+import OTPInput from '../components/auth/OTPInput.jsx';
+import api, { tokenStore } from '../lib/axios.js';
 import { managerApi } from '../api/manager.api.js';
+import { useAuth } from '../context/AuthContext.jsx';
 
 const BUSINESS_TYPES = ['Restaurant', 'Turf', 'Event', 'Play', 'Activity'];
 
@@ -115,11 +118,21 @@ const initialForm = {
 };
 
 export default function ListYourBusinessPage() {
+  const navigate = useNavigate();
+  const { setUser } = useAuth();
   const [form, setForm] = useState(initialForm);
-  const [files, setFiles] = useState({ businessLicense: null, idProof: null, businessImages: [] });
+  const [files, setFiles] = useState({
+    profileImage: null,
+    businessLicense: null,
+    idProof: null,
+    businessImages: [],
+  });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [locating, setLocating] = useState(false);
+  /* Two-phase flow:
+       `success` = null → form view
+       `success` = { email, emailDelivered, emailDeliveryError? } → OTP step */
   const [success, setSuccess] = useState(null);
 
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
@@ -202,15 +215,37 @@ export default function ListYourBusinessPage() {
     try {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => fd.append(k, v));
+      if (files.profileImage) fd.append('profileImage', files.profileImage);
       if (files.businessLicense) fd.append('businessLicense', files.businessLicense);
       if (files.idProof) fd.append('idProof', files.idProof);
       files.businessImages.forEach((img) => fd.append('businessImages', img));
 
       const result = await managerApi.register(fd);
-      setSuccess(result);
-      toast.success('Account created — check your email');
+      setSuccess({
+        email: result.email || form.email,
+        emailDelivered: result.emailDelivered,
+        emailDeliveryError: result.emailDeliveryError,
+      });
+      if (result.emailDelivered) {
+        toast.success('We’ve sent a verification code to your email');
+      } else {
+        toast.error(
+          result.emailDeliveryError ||
+            'We could not send the verification email — please use Resend',
+        );
+      }
     } catch (err) {
-      toast.error(err?.message || 'Registration failed');
+        // If server returned field-level validation errors, show them inline.
+        if (err?.details && Array.isArray(err.details)) {
+          const next = {};
+          err.details.forEach((d) => {
+            if (d.field) next[d.field] = d.message;
+          });
+          setErrors((prev) => ({ ...prev, ...next }));
+          toast.error('Please fix the highlighted fields');
+        } else {
+          toast.error(err?.message || 'Registration failed');
+        }
     } finally {
       setLoading(false);
     }
@@ -218,42 +253,17 @@ export default function ListYourBusinessPage() {
 
   if (success) {
     return (
-      <div className="section flex min-h-[60vh] flex-col items-center justify-center py-16 text-center">
-        <motion.div
-          initial={{ scale: 0, rotate: -10 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ type: 'spring', stiffness: 220 }}
-          className="grid h-20 w-20 place-items-center rounded-3xl bg-emerald-500/15 text-emerald-300"
-        >
-          <CheckCircle2 className="h-10 w-10" />
-        </motion.div>
-        <h1 className="mt-5 font-display text-2xl font-bold text-white sm:text-3xl">
-          Check your inbox
-        </h1>
-        <p className="mt-2 max-w-md text-sm text-slate-400">
-          We sent a verification link to <strong className="text-white">{form.email}</strong>.
-          Click it to confirm your email — once verified your application moves to admin review.
-        </p>
-
-        {success.devVerifyUrl && (
-          <div className="mt-6 max-w-md rounded-2xl border border-brand-500/30 bg-brand-500/10 p-4 text-left text-xs">
-            <p className="font-semibold text-brand-200">Demo mode shortcut</p>
-            <p className="mt-1 text-brand-100/80">
-              Mail delivery isn’t configured locally, so open this link directly:
-            </p>
-            <a
-              href={success.devVerifyUrl}
-              className="mt-2 block break-all rounded-lg bg-ink-900/60 p-2 text-brand-200 underline-offset-2 hover:underline"
-            >
-              {success.devVerifyUrl}
-            </a>
-          </div>
-        )}
-
-        <Button as={Link} to="/" variant="secondary" className="mt-8">
-          Back to home
-        </Button>
-      </div>
+      <OtpVerificationStep
+        email={success.email}
+        emailDelivered={success.emailDelivered}
+        emailDeliveryError={success.emailDeliveryError}
+        onVerified={({ token, user }) => {
+          tokenStore.set(token);
+          setUser(user);
+          toast.success('Email verified — your application is now under review');
+          navigate('/manager', { replace: true });
+        }}
+      />
     );
   }
 
@@ -374,9 +384,16 @@ export default function ListYourBusinessPage() {
 
         <Section
           icon={ShieldCheck}
-          title="Documents"
-          subtitle="Used by our team to verify your business — JPG, PNG or PDF, up to 8 MB."
+          title="Documents & images"
+          subtitle="Profile picture is shown on your dashboard. JPG, PNG or PDF, up to 8 MB."
         >
+          <FileField
+            label="Profile image (optional)"
+            accept="image/*"
+            value={files.profileImage}
+            onChange={(f) => setFiles({ ...files, profileImage: f })}
+            hint="A clear face photo for your manager profile."
+          />
           <div className="grid gap-4 sm:grid-cols-2">
             <FileField
               label="Business licence"
@@ -427,6 +444,139 @@ export default function ListYourBusinessPage() {
           </Button>
         </div>
       </form>
+    </div>
+  );
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   Step 2 — OTP verification.
+   Shown immediately after the application is submitted. The user enters
+   the 6-digit code we emailed them; on success we set their session and
+   the parent navigates them to /manager.
+   ─────────────────────────────────────────────────────────────────────── */
+
+const RESEND_COOLDOWN_S = 60;
+
+function OtpVerificationStep({ email, emailDelivered, emailDeliveryError, onVerified }) {
+  const [code, setCode] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
+  /* The first send already used a slot — start the cooldown immediately. */
+  const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_S);
+  const [deliveryWarning, setDeliveryWarning] = useState(
+    emailDelivered === false ? emailDeliveryError : null,
+  );
+
+  /* Tick down the cooldown each second. */
+  useEffect(() => {
+    if (cooldown <= 0) return undefined;
+    const id = setInterval(() => setCooldown((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(id);
+  }, [cooldown]);
+
+  const verify = async () => {
+    if (code.length !== 6) return toast.error('Enter the 6-digit code from your email');
+    setVerifying(true);
+    try {
+      const result = await managerApi.verifyOtp(email, code);
+      onVerified(result);
+    } catch (err) {
+      toast.error(err?.message || 'Verification failed');
+      /* Wrong/expired codes clear the input so the user can retype cleanly. */
+      setCode('');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const resend = async () => {
+    if (cooldown > 0 || resending) return;
+    setResending(true);
+    try {
+      const result = await managerApi.resendOtp(email);
+      if (result?.emailDelivered) {
+        toast.success('A fresh code has been sent to your inbox');
+        setDeliveryWarning(null);
+      } else {
+        toast.error(
+          result?.emailDeliveryError ||
+            'We could not send the code — please try again in a moment',
+        );
+        setDeliveryWarning(result?.emailDeliveryError || 'Email delivery failed');
+      }
+      setCooldown(RESEND_COOLDOWN_S);
+      setCode('');
+    } catch (err) {
+      toast.error(err?.message || 'Could not resend the code');
+    } finally {
+      setResending(false);
+    }
+  };
+
+  return (
+    <div className="section flex min-h-[70vh] flex-col items-center justify-center py-12">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="card w-full max-w-md p-8"
+      >
+        <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-brand-500/15 text-brand-300">
+          <MailCheck className="h-8 w-8" />
+        </div>
+        <h1 className="mt-5 text-center font-display text-2xl font-bold text-white">
+          Verify your email
+        </h1>
+        <p className="mt-2 text-center text-sm text-slate-400">
+          We’ve sent a 6-digit verification code to{' '}
+          <strong className="text-white">{email}</strong>.
+        </p>
+        <p className="mt-1 text-center text-xs text-slate-500">
+          Don’t see it? Check your spam folder, or request a new one below.
+        </p>
+
+        {deliveryWarning && (
+          <p className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+            {deliveryWarning}
+          </p>
+        )}
+
+        <div className="mt-6">
+          <OTPInput value={code} onChange={setCode} />
+        </div>
+
+        <Button
+          fullWidth
+          size="lg"
+          className="mt-5"
+          loading={verifying}
+          onClick={verify}
+        >
+          Verify &amp; continue
+        </Button>
+
+        <div className="mt-4 text-center text-xs text-slate-500">
+          Didn’t get the code?{' '}
+          <button
+            type="button"
+            onClick={resend}
+            disabled={cooldown > 0 || resending}
+            className="inline-flex items-center gap-1 font-semibold text-brand-300 transition-colors hover:text-brand-200 disabled:text-slate-500"
+          >
+            {resending ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3 w-3" />
+            )}
+            {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}
+          </button>
+        </div>
+
+        <p className="mt-6 text-center text-xs text-slate-500">
+          <Link to="/" className="hover:text-slate-300">
+            ← Back to home
+          </Link>
+        </p>
+      </motion.div>
     </div>
   );
 }

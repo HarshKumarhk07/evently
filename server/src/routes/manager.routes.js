@@ -7,12 +7,14 @@ import { managerDocsUpload } from '../middleware/upload.js';
 import {
   managerRegisterSchema,
   verifyEmailSchema,
+  verifyOtpSchema,
+  resendOtpSchema,
 } from '../validators/manager.validator.js';
 
 const router = Router();
 
-/* Public — manager onboarding. Multer must parse the multipart body first
-   so the validator can see the text fields. */
+/* Public — manager onboarding. Multer parses the multipart body first so
+   the validator can see the text fields. */
 router.post(
   '/register',
   authLimiter,
@@ -20,6 +22,23 @@ router.post(
   validate(managerRegisterSchema),
   manager.registerManager,
 );
+
+/* OTP-code flow (canonical). */
+router.post(
+  '/verify-otp',
+  authLimiter,
+  validate(verifyOtpSchema),
+  manager.verifyOtp,
+);
+router.post(
+  '/resend-otp',
+  authLimiter,
+  validate(resendOtpSchema),
+  manager.resendOtp,
+);
+
+/* Legacy token-link path — kept for any verification emails already in
+   inboxes. New onboarding uses the OTP endpoints above. */
 router.post(
   '/verify-email',
   authLimiter,

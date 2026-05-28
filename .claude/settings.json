@@ -14,7 +14,16 @@
       "Bash(PORT=5051 MONGO_URI=\"mongodb://127.0.0.1:27017/district\" node src/server.js)",
       "Bash(PORT=5061 MONGO_URI=\"mongodb://127.0.0.1:27017/bookify\" node src/server.js)",
       "Bash(PORT=5083 MONGO_URI=\"mongodb://127.0.0.1:27017/bookify\" node src/server.js)",
-      "Bash(MONGO_URI=mongodb://127.0.0.1:27017/bookify node -e ' *)"
+      "Bash(MONGO_URI=mongodb://127.0.0.1:27017/bookify node -e ' *)",
+      "Bash(PORT=5087 MONGO_URI=\"mongodb://127.0.0.1:27017/bookify\" node src/server.js)",
+      "Bash(net start *)",
+      "Bash(PORT=5089 node src/server.js)",
+      "Bash(taskkill //F //PID 19836)",
+      "PowerShell(Stop-Process -Id 19836 -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(\"stopped\")",
+      "Bash(PORT=5093 node src/server.js)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 5093 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }; \"stopped\")",
+      "PowerShell(Get-NetTCPConnection -LocalPort 5095 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force })"
     ]
   }
 }

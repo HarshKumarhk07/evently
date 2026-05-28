@@ -4,7 +4,7 @@ import { uploadImage } from '../controllers/upload.controller.js';
 import { protect, restrictTo } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
-import { rejectManagerSchema } from '../validators/manager.validator.js';
+import { rejectManagerSchema, emailTestSchema } from '../validators/manager.validator.js';
 
 const router = Router();
 
@@ -23,6 +23,10 @@ router.get('/managers', admin.listManagers);
 router.get('/managers/:id', admin.getManager);
 router.post('/managers/:id/approve', admin.approveManager);
 router.post('/managers/:id/reject', validate(rejectManagerSchema), admin.rejectManager);
+
+/* Mail-system debug endpoint — sends a test email and surfaces the
+   provider's raw response so config issues are easy to diagnose. */
+router.post('/email-test', validate(emailTestSchema), admin.sendTestEmail);
 
 // Admin: manage cities
 import * as city from '../controllers/city.controller.js';

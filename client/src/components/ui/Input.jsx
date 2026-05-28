@@ -1,4 +1,5 @@
-import { forwardRef, useId } from 'react';
+import { forwardRef, useId, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '../../lib/cn.js';
 
 /* Labelled text input with icon slot, error state and accessible wiring. */
@@ -8,6 +9,10 @@ export const Input = forwardRef(function Input(
 ) {
   const autoId = useId();
   const inputId = id || autoId;
+  const isPassword = props.type === 'password';
+  const [showPassword, setShowPassword] = useState(false);
+  const inputType = isPassword && showPassword ? 'text' : props.type;
+  const { type: _type, ...restProps } = props;
 
   return (
     <div className="w-full">
@@ -30,11 +35,25 @@ export const Input = forwardRef(function Input(
           className={cn(
             'input-base',
             Icon && 'pl-10',
+            isPassword && 'pr-12',
+            isPassword && Icon && 'pr-20',
             error && 'border-red-500/70 focus:border-red-500',
             className,
           )}
-          {...props}
+          {...restProps}
+          type={inputType}
         />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShowPassword((s) => !s)}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            aria-pressed={showPassword}
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-500 transition-colors hover:text-slate-200"
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        )}
       </div>
       {error ? (
         <p className="mt-1.5 text-xs text-red-400">{error}</p>

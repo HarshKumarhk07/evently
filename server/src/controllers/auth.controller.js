@@ -48,25 +48,19 @@ export const getMe = asyncHandler(async (req, res) => ok(res, req.user));
 
 export const forgotPassword = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email: req.body.email });
-  let devOtp = null;
 
-  /* Always respond the same way so the endpoint cannot enumerate accounts. */
+  /* Always respond the same way so the endpoint cannot enumerate accounts.
+     The OTP is only ever delivered through email — never returned to the
+     client. */
   if (user) {
     const otp = generateOTP();
     user.resetOTP = otp;
     user.resetOTPExpires = Date.now() + 10 * 60 * 1000;
     await user.save({ validateBeforeSave: false });
     emailService.sendOTP(user, otp).catch(() => {});
-
-    /* Convenience for local demos with no mail provider — never exposed in production. */
-    if (!env.isProd && !env.hasMail) devOtp = otp;
   }
 
-  return ok(
-    res,
-    devOtp ? { devOtp } : null,
-    'If that email exists, a verification code has been sent',
-  );
+  return ok(res, null, 'If that email exists, a verification code has been sent');
 });
 
 /**

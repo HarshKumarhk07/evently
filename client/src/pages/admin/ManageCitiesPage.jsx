@@ -6,7 +6,6 @@ import Button from '../../components/ui/Button.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import ImageUploader from '../../components/admin/ImageUploader.jsx';
 import { Input, Select } from '../../components/ui/Input.jsx';
-import { uploadImage } from '../../api/uploads.api.js';
 
 export default function ManageCitiesPage() {
   const [cities, setCities] = useState([]);
@@ -15,7 +14,7 @@ export default function ManageCitiesPage() {
 
   useEffect(() => {
     listCities().then((r) => {
-      setCities(r.items || []);
+      setCities((r.items || []).filter(Boolean));
       setLoading(false);
     });
   }, []);
@@ -29,7 +28,7 @@ export default function ManageCitiesPage() {
 
   // Minimal create flow — open a prompt for name only. Can be extended.
   const handleAdd = async () => {
-    setModal({ mode: 'create' });
+    setModal({ mode: 'create', city: null });
   };
 
   const handleImport = async (file) => {
@@ -41,7 +40,10 @@ export default function ManageCitiesPage() {
       const [cityName, state, country, lat, lng, isPopular, displayOrder] = line.split(',').map((s) => s?.trim());
       try {
         const res = await createCity({ cityName, state, country, lat, lng, isPopular: isPopular === '1' || isPopular === 'true', displayOrder: Number(displayOrder) || 0 });
-        setCities((s) => [res.data, ...s]);
+        const createdCity = res?.data || res;
+        if (createdCity?._id) {
+          setCities((s) => [createdCity, ...s.filter((x) => x?._id !== createdCity._id)]);
+        }
       } catch (err) {
         // continue
       }
@@ -71,14 +73,14 @@ export default function ManageCitiesPage() {
       </div>
 
       <div className="grid gap-3">
-        {cities.map((c) => (
+        {cities.filter(Boolean).map((c) => (
           <div key={c._id} className="flex items-center justify-between rounded-lg border border-white/[0.06] p-3">
             <div>
               <div className="font-semibold text-white">{c.cityName}</div>
               <div className="text-sm text-slate-400">{c.state || c.country}</div>
             </div>
             <div className="flex gap-2">
-              <Button onClick={() => alert('Edit UI not implemented yet')}>Edit</Button>
+              <Button onClick={() => setModal({ mode: 'edit', city: c })}>Edit</Button>
               <Button variant="danger" onClick={() => handleDelete(c._id)}>Delete</Button>
             </div>
           </div>
@@ -91,8 +93,9 @@ export default function ManageCitiesPage() {
           city={modal.city}
           onClose={() => setModal(null)}
           onSaved={(c) => {
+            if (!c?._id) return;
             setModal(null);
-            setCities((s) => [c, ...s.filter((x) => x._id !== c._id)]);
+            setCities((s) => [c, ...s.filter((x) => x?._id !== c._id)]);
           }}
         />
       )}
@@ -101,8 +104,30 @@ export default function ManageCitiesPage() {
 }
 
 function CityModal({ mode = 'create', city = null, onClose, onSaved }) {
-  const [form, setForm] = useState(() => ({ cityName: city?.cityName || '', state: city?.state || '', country: city?.country || '', image: city?.image || '', lat: city?.location?.coordinates?.[1] || '', lng: city?.location?.coordinates?.[0] || '', isPopular: !!city?.isPopular, displayOrder: city?.displayOrder || 0 }));
+  const [form, setForm] = useState(() => ({
+    cityName: city?.cityName || '',
+    state: city?.state || '',
+    country: city?.country || '',
+    image: city?.image || '',
+    lat: city?.location?.coordinates?.[1] ?? '',
+    lng: city?.location?.coordinates?.[0] ?? '',
+    isPopular: !!city?.isPopular,
+    displayOrder: city?.displayOrder ?? 0,
+  }));
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setForm({
+      cityName: city?.cityName || '',
+      state: city?.state || '',
+      country: city?.country || '',
+      image: city?.image || '',
+      lat: city?.location?.coordinates?.[1] ?? '',
+      lng: city?.location?.coordinates?.[0] ?? '',
+      isPopular: !!city?.isPopular,
+      displayOrder: city?.displayOrder ?? 0,
+    });
+  }, [city, mode]);
 
   const submit = async () => {
     setSaving(true);
@@ -120,7 +145,7 @@ function CityModal({ mode = 'create', city = null, onClose, onSaved }) {
       let res;
       if (mode === 'create') res = await createCity(payload);
       else res = await updateCity(city._id, payload);
-      onSaved(res.data);
+      onSaved(res?.data || res);
     } catch (err) {
       toast.error(err.message || 'Failed');
     } finally {
@@ -138,8 +163,8 @@ function CityModal({ mode = 'create', city = null, onClose, onSaved }) {
         </div>
         <ImageUploader value={form.image} onChange={(url) => setForm({ ...form, image: url })} />
         <div className="grid gap-3 sm:grid-cols-3">
-          <Input label="Latitude" value={form.lat} onChange={(e) => setForm({ ...form, lat: e.target.value })} />
-          <Input label="Longitude" value={form.lng} onChange={(e) => setForm({ ...form, lng: e.target.value })} />
+          <Input label="Latitude" type="number" step="any" value={form.lat} onChange={(e) => setForm({ ...form, lat: e.target.value })} />
+          <Input label="Longitude" type="number" step="any" value={form.lng} onChange={(e) => setForm({ ...form, lng: e.target.value })} />
           <Input label="Display order" type="number" value={form.displayOrder} onChange={(e) => setForm({ ...form, displayOrder: e.target.value })} />
         </div>
         <label className="flex items-center gap-2">
