@@ -23,7 +23,8 @@
       "PowerShell(\"stopped\")",
       "Bash(PORT=5093 node src/server.js)",
       "PowerShell(Get-NetTCPConnection -LocalPort 5093 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }; \"stopped\")",
-      "PowerShell(Get-NetTCPConnection -LocalPort 5095 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force })"
+      "PowerShell(Get-NetTCPConnection -LocalPort 5095 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force })",
+      "Bash(git ls-remote *)"
     ]
   }
 }
