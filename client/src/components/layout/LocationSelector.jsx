@@ -189,6 +189,21 @@ export default function LocationSelector() {
                     Choose the city that matches your night out.
                   </p>
                 </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      try {
+                        localStorage.removeItem('bookify_city_object');
+                      } catch (e) {}
+                      setCity(null);
+                      toast.success('Cleared saved city — detecting again');
+                      useCurrentLocation();
+                    }}
+                    className="text-sm text-slate-500 hover:text-slate-700"
+                  >
+                    Reset location
+                  </button>
+                </div>
                 <button
                   onClick={() => setOpen(false)}
                   aria-label="Close location picker"

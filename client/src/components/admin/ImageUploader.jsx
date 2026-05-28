@@ -2,6 +2,8 @@ import { useRef, useState } from 'react';
 import { X, ImagePlus, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { uploadsApi } from '../../api/uploads.api.js';
+import { managerApi } from '../../api/manager.api.js';
+import { useAuth } from '../../context/AuthContext.jsx';
 import { cn } from '../../lib/cn.js';
 
 const MAX_BYTES = 5 * 1024 * 1024; // matches the backend multer limit
@@ -24,6 +26,7 @@ export default function ImageUploader({
   const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const { isAdmin } = useAuth();
 
   const handleFile = async (file) => {
     if (!file) return;
@@ -37,7 +40,9 @@ export default function ImageUploader({
     }
     setUploading(true);
     try {
-      const { url } = await uploadsApi.image(file);
+      const { url } = isAdmin
+        ? await uploadsApi.image(file)
+        : await managerApi.uploadMedia(file);
       onChange(url);
       toast.success('Image uploaded');
     } catch (err) {

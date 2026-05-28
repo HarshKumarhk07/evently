@@ -298,7 +298,14 @@ export default function ManageUsersPage() {
         )}
       </div>
 
-      <UserProfileModal open={Boolean(viewUser)} onClose={() => setViewUser(null)} user={viewUser} />
+      <UserProfileModal
+        open={Boolean(viewUser)}
+        onClose={(saved) => {
+          setViewUser(null);
+          if (saved) load();
+        }}
+        user={viewUser}
+      />
 
       <ConfirmDialog
         open={Boolean(toDelete)}

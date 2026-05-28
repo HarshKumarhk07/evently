@@ -7,10 +7,12 @@ import GoogleButton from '../../components/auth/GoogleButton.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { Input, Select } from '../../components/ui/Input.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useLocation } from '../../context/LocationContext.jsx';
 import { CITIES } from '../../lib/constants.js';
 
 export default function SignupPage() {
   const { register } = useAuth();
+  const { city: selectedCity } = useLocation();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -18,7 +20,7 @@ export default function SignupPage() {
     email: '',
     password: '',
     phone: '',
-    city: CITIES[0],
+    city: selectedCity?.cityName || CITIES[0],
     confirmPassword: '',
   });
   const [errors, setErrors] = useState({});

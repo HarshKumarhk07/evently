@@ -3,12 +3,14 @@ import * as manager from '../controllers/manager.controller.js';
 import { protect, restrictTo } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { authLimiter } from '../middleware/rateLimiter.js';
+import { upload } from '../middleware/upload.js';
 import { managerDocsUpload } from '../middleware/upload.js';
 import {
   managerRegisterSchema,
   verifyEmailSchema,
   verifyOtpSchema,
   resendOtpSchema,
+  managerProfileUpdateSchema,
 } from '../validators/manager.validator.js';
 
 const router = Router();
@@ -49,6 +51,8 @@ router.post(
 /* Manager-only — dashboard endpoints. */
 router.use(protect, restrictTo('manager', 'admin'));
 router.get('/me', manager.getMyManagerProfile);
+router.post('/me/upload', upload.single('image'), manager.uploadMyMedia);
+router.patch('/me', validate(managerProfileUpdateSchema), manager.updateMyManagerProfile);
 router.get('/me/listings', manager.getMyListings);
 router.get('/me/bookings', manager.getMyBookings);
 

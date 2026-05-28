@@ -57,3 +57,21 @@ export const emailTestSchema = z.object({
   subject: z.string().min(2).max(120).optional().default('Bookify email test'),
   message: z.string().max(1000).optional().default('This is a Bookify email test.'),
 });
+
+/* Manager dashboard profile edits. Media fields are stored as URLs and
+   normalized by the controller into the schema's { url, publicId } shape. */
+export const managerProfileUpdateSchema = z.object({
+  name: z.string().min(2).max(80).optional(),
+  phone: z.string().optional(),
+  city: z.string().optional(),
+  businessName: z.string().min(2).max(120).optional(),
+  businessType: z.enum(BUSINESS_TYPES).optional(),
+  businessAddress: z.string().optional(),
+  gstNumber: z.string().optional(),
+  panNumber: z.string().optional(),
+  aadhaarNumber: z.string().optional(),
+  profileImage: z.string().optional(),
+  businessLicense: z.string().optional(),
+  idProof: z.string().optional(),
+  businessImages: z.array(z.string()).optional(),
+});

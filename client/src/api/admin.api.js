@@ -15,4 +15,9 @@ export const adminApi = {
   approveManager: (id) => api.post(`/admin/managers/${id}/approve`).then((r) => r.data),
   rejectManager: (id, reason) =>
     api.post(`/admin/managers/${id}/reject`, { reason }).then((r) => r.data),
+  uploadImage: (file) => {
+    const fd = new FormData();
+    fd.append('image', file);
+    return api.post('/admin/uploads', fd).then((r) => r.data);
+  },
 };

@@ -28,6 +28,19 @@ async function uploadDoc(file, folder) {
   return { url: result.secure_url, publicId: result.public_id };
 }
 
+function normalizeMedia(value) {
+  if (!value) return undefined;
+  if (value === '') return undefined;
+  if (typeof value === 'string') return { url: value, publicId: '' };
+  if (typeof value === 'object') {
+    return {
+      url: value.url || '',
+      publicId: value.publicId || '',
+    };
+  }
+  return undefined;
+}
+
 /**
  * Generates a fresh 6-digit OTP, stores it hashed on the user, and emails it.
  * Returns the raw OTP so dev mode can surface it back to the client.
@@ -283,6 +296,39 @@ export const verifyEmail = asyncHandler(async (req, res) => {
 
 /* GET /api/managers/me — current manager's profile (mirrors /auth/me). */
 export const getMyManagerProfile = asyncHandler(async (req, res) => ok(res, req.user));
+
+export const uploadMyMedia = asyncHandler(async (req, res) => {
+  if (!req.file) throw ApiError.badRequest('No image provided');
+  const result = await uploadBuffer(req.file.buffer, 'bookify/managers/profile').catch(() => null);
+  if (!result) throw ApiError.badRequest('Image hosting is not configured on this server');
+  return ok(res, { url: result.secure_url, publicId: result.public_id }, 'Image uploaded');
+});
+
+export const updateMyManagerProfile = asyncHandler(async (req, res) => {
+  const user = req.user;
+  const body = req.body || {};
+
+  if (body.name !== undefined) user.name = body.name;
+  if (body.phone !== undefined) user.phone = body.phone;
+  if (body.city !== undefined) user.city = body.city;
+
+  user.managerProfile = user.managerProfile || {};
+  if (body.businessName !== undefined) user.managerProfile.businessName = body.businessName;
+  if (body.businessType !== undefined) user.managerProfile.businessType = body.businessType;
+  if (body.businessAddress !== undefined) user.managerProfile.businessAddress = body.businessAddress;
+  if (body.gstNumber !== undefined) user.managerProfile.gstNumber = body.gstNumber;
+  if (body.panNumber !== undefined) user.managerProfile.panNumber = body.panNumber;
+  if (body.aadhaarNumber !== undefined) user.managerProfile.aadhaarNumber = body.aadhaarNumber;
+  if (body.profileImage !== undefined) user.avatar = normalizeMedia(body.profileImage) || {};
+  if (body.businessLicense !== undefined) user.managerProfile.businessLicense = normalizeMedia(body.businessLicense) || {};
+  if (body.idProof !== undefined) user.managerProfile.idProof = normalizeMedia(body.idProof) || {};
+  if (body.businessImages !== undefined) {
+    user.managerProfile.businessImages = (Array.isArray(body.businessImages) ? body.businessImages : []).map(normalizeMedia).filter(Boolean);
+  }
+
+  await user.save({ validateBeforeSave: false });
+  return ok(res, user, 'Profile updated');
+});
 
 /* GET /api/managers/me/listings — every listing owned by the current manager. */
 export const getMyListings = asyncHandler(async (req, res) => {

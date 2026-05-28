@@ -35,6 +35,8 @@ export default function ProfileMenu() {
     navigate('/');
   };
 
+  const profilePath = isManager ? '/manager/profile' : '/dashboard/profile';
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -66,7 +68,7 @@ export default function ProfileMenu() {
               {items.map((item) => (
                 <Link
                   key={item.to}
-                  to={item.to}
+                  to={item.label === 'Profile' ? profilePath : item.to}
                   role="menuitem"
                   className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-white/[0.05] hover:text-white"
                 >

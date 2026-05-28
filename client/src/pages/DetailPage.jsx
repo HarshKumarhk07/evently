@@ -22,6 +22,12 @@ import { listingApiFor } from '../api/listings.api.js';
 import { VERTICAL_CONFIG, titleOf } from '../lib/listings.js';
 import { formatCurrency, formatDateTime } from '../lib/format.js';
 import { makeArtImage } from '../lib/visuals.js';
+import { POPULAR_CITIES } from '../lib/constants.js';
+
+function cityFallbackCoords(cityName) {
+  const match = POPULAR_CITIES.find((c) => c.name === cityName);
+  return match ? { lat: match.lat, lng: match.lng } : null;
+}
 
 /* Card wrapper for a content block. */
 function Block({ title, icon: Icon, children }) {
@@ -322,15 +328,21 @@ export default function DetailPage({ vertical }) {
             </Block>
           )}
 
-          {item.location && (
-            <Block title="Location" icon={MapPin}>
-              <MapView
-                lat={item.location.lat}
-                lng={item.location.lng}
-                label={titleOf(item)}
-              />
-            </Block>
-          )}
+          <Block title="Location" icon={MapPin}>
+            <MapView
+              lat={
+                item.location?.lat && item.location.lat !== 0
+                  ? item.location.lat
+                  : cityFallbackCoords(item.city)?.lat
+              }
+              lng={
+                item.location?.lng && item.location.lng !== 0
+                  ? item.location.lng
+                  : cityFallbackCoords(item.city)?.lng
+              }
+              label={titleOf(item)}
+            />
+          </Block>
 
           <div className="card p-5 sm:p-6">
             <ReviewSection

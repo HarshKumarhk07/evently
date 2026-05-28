@@ -12,6 +12,32 @@ function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function normalizeMedia(value) {
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return { url: '', publicId: '' };
+  if (typeof value === 'string') return { url: value, publicId: '' };
+  if (typeof value === 'object') {
+    return { url: value.url || '', publicId: value.publicId || '' };
+  }
+  return undefined;
+}
+
+function normalizeManagerProfile(profile = {}) {
+  const next = { ...profile };
+  if (Object.prototype.hasOwnProperty.call(profile, 'businessLicense')) {
+    next.businessLicense = normalizeMedia(profile.businessLicense) || { url: '', publicId: '' };
+  }
+  if (Object.prototype.hasOwnProperty.call(profile, 'idProof')) {
+    next.idProof = normalizeMedia(profile.idProof) || { url: '', publicId: '' };
+  }
+  if (Object.prototype.hasOwnProperty.call(profile, 'businessImages')) {
+    next.businessImages = Array.isArray(profile.businessImages)
+      ? profile.businessImages.map((item) => normalizeMedia(item)).filter(Boolean)
+      : [];
+  }
+  return next;
+}
+
 /* GET /api/admin/stats — headline metrics for the analytics dashboard. */
 export const getStats = asyncHandler(async (_req, res) => {
   const [users, restaurants, plays, events, bookings, revenueAgg, statusAgg, recent] =
@@ -73,11 +99,13 @@ export const listUsers = asyncHandler(async (req, res) => {
 
 /* PATCH /api/admin/users/:id — change role or verification status. */
 export const updateUser = asyncHandler(async (req, res) => {
-  const { role, isVerified } = req.body;
+  const body = req.body || {};
+  const allowed = ['role', 'isVerified', 'name', 'email', 'phone', 'city', 'avatar', 'managerProfile'];
   const updates = {};
-  if (role) updates.role = role;
-  if (typeof isVerified === 'boolean') updates.isVerified = isVerified;
-  
+  for (const k of allowed) {
+    if (Object.prototype.hasOwnProperty.call(body, k)) updates[k] = body[k];
+  }
+
   /* Prevent creating more than one admin account. */
   if (updates.role === 'admin') {
     const existingAdmin = await User.findOne({ role: 'admin' }).lean();
@@ -86,7 +114,20 @@ export const updateUser = asyncHandler(async (req, res) => {
     }
   }
 
-  const user = await User.findByIdAndUpdate(req.params.id, updates, { new: true });
+  const user = await User.findById(req.params.id);
+  if (!user) throw ApiError.notFound('User not found');
+
+  // Apply top-level updates
+  for (const [k, v] of Object.entries(updates)) {
+    if (k === 'managerProfile') {
+      user.managerProfile = { ...user.managerProfile, ...normalizeManagerProfile(v) };
+    } else if (k === 'avatar') {
+      user.avatar = normalizeMedia(v) || { url: '', publicId: '' };
+    } else {
+      user[k] = v;
+    }
+  }
+  await user.save({ validateBeforeSave: false });
   if (!user) throw ApiError.notFound('User not found');
   return ok(res, user, 'User updated');
 });

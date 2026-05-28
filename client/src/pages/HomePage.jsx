@@ -11,6 +11,7 @@ import { usersApi } from '../api/users.api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { titleOf, REFTYPE_TO_VERTICAL } from '../lib/listings.js';
 import { useLocation } from '../context/LocationContext.jsx';
+import { makeArtImage } from '../lib/visuals.js';
 
 export default function HomePage() {
   const { user, isAuthenticated } = useAuth();

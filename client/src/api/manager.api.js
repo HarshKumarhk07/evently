@@ -20,6 +20,12 @@ export const managerApi = {
     api.post('/managers/verify-email', { token }).then((r) => r.data),
 
   me: () => api.get('/managers/me').then((r) => r.data),
+  uploadMedia: (file) => {
+    const fd = new FormData();
+    fd.append('image', file);
+    return api.post('/managers/me/upload', fd).then((r) => r.data);
+  },
+  updateMe: (payload) => api.patch('/managers/me', payload).then((r) => r.data),
   myListings: () => api.get('/managers/me/listings').then((r) => r.data),
   myBookings: () => api.get('/managers/me/bookings').then((r) => r.data),
 };

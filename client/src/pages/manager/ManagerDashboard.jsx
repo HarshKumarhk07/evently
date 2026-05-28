@@ -16,6 +16,7 @@ import EmptyState from '../../components/ui/EmptyState.jsx';
 import ConfirmDialog from '../../components/feedback/ConfirmDialog.jsx';
 import ImageUploader from '../../components/admin/ImageUploader.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useLocation } from '../../context/LocationContext.jsx';
 import { managerApi } from '../../api/manager.api.js';
 import { listingApiFor } from '../../api/listings.api.js';
 import { VERTICAL_CONFIG, titleOf } from '../../lib/listings.js';
@@ -77,6 +78,7 @@ const BG_BY_TONE = {
 
 export default function ManagerDashboard() {
   const { user } = useAuth();
+  const { city: browsingCity } = useLocation();
   const profile = user?.managerProfile || {};
   const status = profile.status || 'pending_email';
   const meta = STATUS_META[status];
@@ -87,6 +89,7 @@ export default function ManagerDashboard() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editItem, setEditItem] = useState(null);
   const [toDelete, setToDelete] = useState(null);
   const [verticalFilter, setVerticalFilter] = useState('all');
 
@@ -329,6 +332,7 @@ export default function ManagerDashboard() {
                   <ListingRow
                     key={item._id}
                     item={item}
+                    onEdit={() => setEditItem(item)}
                     onDelete={() => setToDelete(item)}
                   />
                 ))}
@@ -366,8 +370,21 @@ export default function ManagerDashboard() {
         defaultVertical={
           BUSINESS_TYPE_TO_VERTICAL[profile.businessType] || 'dining'
         }
+        defaultCity={browsingCity?.cityName || user?.city || CITIES[0]}
         onCreated={() => {
           setCreateOpen(false);
+          loadDashboard();
+        }}
+      />
+
+      <CreateListingModal
+        open={Boolean(editItem)}
+        onClose={() => setEditItem(null)}
+        defaultVertical={editItem?._vertical || BUSINESS_TYPE_TO_VERTICAL[profile.businessType] || 'dining'}
+        defaultCity={browsingCity?.cityName || user?.city || CITIES[0]}
+        item={editItem}
+        onCreated={() => {
+          setEditItem(null);
           loadDashboard();
         }}
       />
@@ -441,7 +458,7 @@ function FilterChips({ value, onChange, options }) {
   );
 }
 
-function ListingRow({ item, onDelete }) {
+function ListingRow({ item, onEdit, onDelete }) {
   const cfg = VERTICAL_CONFIG[item._vertical];
   return (
     <motion.div
@@ -488,6 +505,14 @@ function ListingRow({ item, onDelete }) {
       </div>
 
       <div className="flex items-center gap-0.5 pr-1">
+        <button
+          onClick={onEdit}
+          className="hidden rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-white sm:block"
+          aria-label="Edit listing"
+          title="Edit"
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
         <Link
           to={`${cfg.basePath}/${item.slug}`}
           target="_blank"
@@ -542,21 +567,106 @@ function ActivityRow({ booking: b }) {
   );
 }
 
-/* ───── Create-listing modal (unchanged) ──────────────────────────────── */
+/* ───── Create / edit listing modal ───────────────────────────────────── */
 
-function CreateListingModal({ open, onClose, defaultVertical, onCreated }) {
+function buildPayload(vertical, form) {
+  const base = {
+    city: form.city,
+    cityId: form.cityId,
+    locality: form.locality,
+    description: form.description,
+    coverImage: form.coverImage || undefined,
+    isFeatured: form.isFeatured,
+  };
+
+  if (form.lat && form.lng) {
+    base.location = { lat: Number(form.lat), lng: Number(form.lng) };
+    base.locationGeo = { type: 'Point', coordinates: [Number(form.lng), Number(form.lat)] };
+  }
+
+  if (vertical === 'dining') {
+    return {
+      ...base,
+      name: form.name,
+      location: { lat: Number(form.lat) || 0, lng: Number(form.lng) || 0 },
+      locationGeo: { type: 'Point', coordinates: [Number(form.lng) || 0, Number(form.lat) || 0] },
+      cuisine: form.cuisine ? form.cuisine.split(',').map((c) => c.trim()).filter(Boolean) : [],
+      costForTwo: Number(form.costForTwo || 0),
+    };
+  }
+  if (vertical === 'plays') {
+    return {
+      ...base,
+      title: form.name,
+      language: form.language,
+      duration: Number(form.duration || 0),
+    };
+  }
+  return {
+    ...base,
+    title: form.name,
+    category: form.category,
+    startDate: form.startDate,
+  };
+}
+
+function getInitialForm(item, defaultCity) {
+  if (!item) {
+    return {
+      name: '',
+      description: '',
+      city: defaultCity || CITIES[0],
+      cityId: '',
+      locality: '',
+      coverImage: '',
+      isFeatured: false,
+      cuisine: '',
+      costForTwo: 1500,
+      language: 'English',
+      duration: 120,
+      category: EVENT_CATEGORIES[0],
+      startDate: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+      lat: '',
+      lng: '',
+    };
+  }
+  return {
+    name: titleOf(item),
+    description: item.description || '',
+    city: item.city || defaultCity || CITIES[0],
+    cityId: item.cityId || '',
+    locality: item.locality || '',
+    coverImage: item.coverImage || '',
+    isFeatured: Boolean(item.isFeatured),
+    cuisine: (item.cuisine || []).join(', '),
+    costForTwo: item.costForTwo || 1500,
+    language: item.language || 'English',
+    duration: item.duration || 120,
+    category: item.category || EVENT_CATEGORIES[0],
+    startDate: item.startDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+    lat: item.location?.lat || item.locationGeo?.coordinates?.[1] || '',
+    lng: item.location?.lng || item.locationGeo?.coordinates?.[0] || '',
+  };
+}
+
+function CreateListingModal({ open, onClose, defaultVertical, defaultCity, item, onCreated }) {
+  const locationCtx = useLocation();
   const [vertical, setVertical] = useState(defaultVertical);
-  const [form, setForm] = useState({
-    name: '', description: '', city: CITIES[0], coverImage: '',
-    category: EVENT_CATEGORIES[0],
-    startDate: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
-    duration: 120,
-  });
+  const [form, setForm] = useState(() => getInitialForm(item, defaultCity));
   const [saving, setSaving] = useState(false);
+  const isEdit = Boolean(item);
 
-  useEffect(() => setVertical(defaultVertical), [defaultVertical, open]);
+  useEffect(() => {
+    if (!open) return;
+    setVertical(defaultVertical);
+    setForm(getInitialForm(item, defaultCity));
+  }, [defaultVertical, defaultCity, item, open]);
 
-  const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
+  const set = (key) => (e) =>
+    setForm((prev) => ({
+      ...prev,
+      [key]: e.target.type === 'checkbox' ? e.target.checked : e.target.value,
+    }));
 
   const submit = async (e) => {
     e.preventDefault();
@@ -564,36 +674,19 @@ function CreateListingModal({ open, onClose, defaultVertical, onCreated }) {
     setSaving(true);
     try {
       const api = listingApiFor(vertical);
-      const base = {
-        city: form.city,
-        description: form.description,
-        coverImage: form.coverImage || undefined,
-      };
-      let payload;
-      if (vertical === 'dining') {
-        payload = { ...base, name: form.name };
-      } else if (vertical === 'plays') {
-        payload = { ...base, title: form.name, duration: Number(form.duration) };
-      } else {
-        payload = {
-          ...base,
-          title: form.name,
-          category: form.category,
-          startDate: form.startDate,
-        };
-      }
-      await api.create(payload);
-      toast.success('Listing created');
-      onCreated();
+      const payload = buildPayload(vertical, form);
+      const saved = isEdit ? await api.update(item._id, payload) : await api.create(payload);
+      toast.success(isEdit ? 'Listing updated' : 'Listing created');
+      onCreated(saved);
     } catch (err) {
-      toast.error(err?.message || 'Could not create');
+      toast.error(err?.message || 'Could not save');
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Create a new listing" size="xl">
+    <Modal open={open} onClose={onClose} title={`${isEdit ? 'Edit' : 'Create a new'} listing`} size="xl">
       <form onSubmit={submit} className="space-y-5">
         <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
           <p className="text-sm font-semibold text-white">Listing type</p>
@@ -607,62 +700,84 @@ function CreateListingModal({ open, onClose, defaultVertical, onCreated }) {
             />
             <Select
               label="City"
-              value={form.city}
-              onChange={set('city')}
-              options={CITIES.map((c) => ({ value: c, label: c }))}
+              value={form.cityId || form.city || ''}
+              onChange={(e) => {
+                const v = e.target.value;
+                const found = locationCtx.cities.find((c) => c._id === v || c.cityName === v);
+                setForm((prev) => ({ ...prev, city: found ? found.cityName : v, cityId: found ? found._id : '' }));
+              }}
+              options={[
+                { value: '', label: 'Choose a city' },
+                ...locationCtx.cities.map((c) => ({ value: c._id, label: c.cityName })),
+              ]}
             />
           </div>
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <p className="text-sm font-semibold text-white">Basics</p>
-            <div className="space-y-4">
-              <Input
-                label={vertical === 'dining' ? 'Restaurant name' : 'Title'}
-                placeholder={vertical === 'dining' ? 'The Copper Table' : 'Summer Night Festival'}
-                value={form.name}
-                onChange={set('name')}
-              />
-              <Textarea
-                label="Short description"
-                placeholder="Describe the experience in one or two engaging sentences."
-                rows={5}
-                value={form.description}
-                onChange={set('description')}
-              />
-            </div>
+            <p className="text-sm font-semibold text-white">Listing details</p>
+            <p className="text-xs text-slate-500">Set the public title and description that people will see first.</p>
+            <Input
+              label={vertical === 'dining' ? 'Restaurant name' : 'Title'}
+              placeholder={vertical === 'dining' ? 'The Copper Table' : 'Summer Night Festival'}
+              value={form.name}
+              onChange={set('name')}
+            />
+            <Textarea
+              label="Short description"
+              placeholder="Write a short, compelling description for the listing."
+              rows={4}
+              value={form.description}
+              onChange={set('description')}
+            />
           </div>
 
           <div className="space-y-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <p className="text-sm font-semibold text-white">Publishing</p>
-            <p className="text-xs text-slate-500">Media and event-specific details.</p>
-            {vertical === 'plays' && (
-              <Input
-                label="Duration (mins)"
-                type="number"
-                placeholder="120"
-                value={form.duration}
-                onChange={set('duration')}
-              />
-            )}
-            {vertical === 'events' && (
-              <div className="grid gap-4 sm:grid-cols-2">
+            <p className="text-sm font-semibold text-white">Location & category</p>
+            <p className="text-xs text-slate-500">Choose the city and optional area for search and discovery.</p>
+            <Input
+              label="Locality / Area"
+              placeholder="Bandra West, MG Road, etc."
+              value={form.locality || ''}
+              onChange={(e) => setForm((prev) => ({ ...prev, locality: e.target.value }))}
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              {vertical === 'dining' && (
+                <Input label="Cost for two (₹)" type="number" placeholder="1500" value={form.costForTwo || ''} onChange={set('costForTwo')} />
+              )}
+              {vertical === 'plays' && (
+                <Input label="Duration (mins)" type="number" placeholder="120" value={form.duration || ''} onChange={set('duration')} />
+              )}
+              {vertical === 'events' && (
                 <Select
                   label="Category"
                   value={form.category}
                   onChange={set('category')}
                   options={EVENT_CATEGORIES.map((c) => ({ value: c, label: c }))}
                 />
-                <Input
-                  label="Start date"
-                  type="date"
-                  value={form.startDate}
-                  onChange={set('startDate')}
-                />
-              </div>
-            )}
-
+              )}
+              {vertical === 'dining' && (
+                <Input label="Cuisines" value={form.cuisine || ''} onChange={set('cuisine')} placeholder="Italian, Continental" hint="Comma-separated list" />
+              )}
+              {vertical === 'plays' && (
+                <Input label="Language" placeholder="English" value={form.language || ''} onChange={set('language')} />
+              )}
+              {vertical === 'events' && (
+                <Input label="Start date" type="date" value={form.startDate || ''} onChange={set('startDate')} />
+              )}
+              <Input label="Latitude" type="number" step="any" placeholder="19.0760" value={form.lat || ''} onChange={(e) => setForm((prev) => ({ ...prev, lat: e.target.value }))} />
+              <Input label="Longitude" type="number" step="any" placeholder="72.8777" value={form.lng || ''} onChange={(e) => setForm((prev) => ({ ...prev, lng: e.target.value }))} />
+            </div>
+            <label className="flex items-center gap-2.5 rounded-xl border border-white/[0.06] bg-ink-900/40 px-3 py-2.5 text-sm text-slate-300">
+              <input
+                type="checkbox"
+                checked={Boolean(form.isFeatured)}
+                onChange={set('isFeatured')}
+                className="h-4 w-4 rounded border-ink-600 bg-ink-900 accent-brand-500"
+              />
+              Mark as featured
+            </label>
             <ImageUploader
               value={form.coverImage}
               onChange={(url) => setForm((f) => ({ ...f, coverImage: url }))}
@@ -677,10 +792,49 @@ function CreateListingModal({ open, onClose, defaultVertical, onCreated }) {
             Cancel
           </Button>
           <Button type="submit" loading={saving} icon={Pencil}>
-            Create listing
+            {isEdit ? 'Save changes' : 'Create listing'}
           </Button>
         </div>
       </form>
     </Modal>
   );
+}
+
+function getInitialForm(item, defaultCity) {
+  if (!item) {
+    return {
+      name: '',
+      description: '',
+      city: defaultCity || CITIES[0],
+      cityId: '',
+      locality: '',
+      coverImage: '',
+      isFeatured: false,
+      cuisine: '',
+      costForTwo: 1500,
+      language: 'English',
+      duration: 120,
+      category: EVENT_CATEGORIES[0],
+      startDate: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+      lat: '',
+      lng: '',
+    };
+  }
+  return {
+    name: titleOf(item),
+    description: item.description || '',
+    city: item.city || defaultCity || CITIES[0],
+    cityId: item.cityId || '',
+    locality: item.locality || '',
+    coverImage: item.coverImage || '',
+    isFeatured: Boolean(item.isFeatured),
+    cuisine: (item.cuisine || []).join(', '),
+    costForTwo: item.costForTwo || 1500,
+    language: item.language || 'English',
+    duration: item.duration || 120,
+    category: item.category || EVENT_CATEGORIES[0],
+    startDate: item.startDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+    lat: item.location?.lat || item.locationGeo?.coordinates?.[1] || '',
+    lng: item.location?.lng || item.locationGeo?.coordinates?.[0] || '',
+  };
 }
