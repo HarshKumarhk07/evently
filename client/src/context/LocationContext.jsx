@@ -1,26 +1,49 @@
-import { createContext, useContext, useState, useCallback } from 'react';
-import { CITIES, DEFAULT_CITY } from '../lib/constants.js';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { listCities, nearestCity as apiNearest } from '../api/cities.api.js';
 
 const LocationContext = createContext(null);
-const STORAGE_KEY = 'bookify_city';
-const LEGACY_STORAGE_KEY = 'district_city';
+const STORAGE_KEY = 'bookify_city_object';
 
 export function LocationProvider({ children }) {
-  const [city, setCityState] = useState(
-    () =>
-      localStorage.getItem(STORAGE_KEY) ||
-      localStorage.getItem(LEGACY_STORAGE_KEY) ||
-      DEFAULT_CITY,
-  );
+  const [cities, setCities] = useState([]);
+  const [selected, setSelected] = useState(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  });
 
-  const setCity = useCallback((next) => {
-    setCityState(next);
-    localStorage.setItem(STORAGE_KEY, next);
-    localStorage.removeItem(LEGACY_STORAGE_KEY);
+  useEffect(() => {
+    let mounted = true;
+    listCities()
+      .then((res) => {
+        if (!mounted) return;
+        setCities(res.items || []);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const setCity = useCallback((cityObj) => {
+    setSelected(cityObj);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cityObj));
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  const detectNearest = useCallback(async (lat, lng, maxDistance) => {
+    const res = await apiNearest(lat, lng, maxDistance);
+    return res.data; // may be null
   }, []);
 
   return (
-    <LocationContext.Provider value={{ city, setCity, cities: CITIES }}>
+    <LocationContext.Provider value={{ cities, city: selected, setCity, detectNearest }}>
       {children}
     </LocationContext.Provider>
   );

@@ -8,9 +8,11 @@ import { Input, Textarea, Select } from '../../components/ui/Input.jsx';
 import { Skeleton } from '../../components/ui/Skeleton.jsx';
 import Badge from '../../components/ui/Badge.jsx';
 import ConfirmDialog from '../../components/feedback/ConfirmDialog.jsx';
+import ImageUploader from '../../components/admin/ImageUploader.jsx';
 import { listingApiFor } from '../../api/listings.api.js';
 import { VERTICAL_CONFIG, titleOf } from '../../lib/listings.js';
-import { CITIES, EVENT_CATEGORIES } from '../../lib/constants.js';
+import { EVENT_CATEGORIES } from '../../lib/constants.js';
+import { useLocation } from '../../context/LocationContext.jsx';
 import { makeArtImage } from '../../lib/visuals.js';
 
 const TABS = [
@@ -22,7 +24,9 @@ const TABS = [
 const blankForm = {
   name: '',
   description: '',
-  city: CITIES[0],
+  city: '',
+  cityId: '',
+  locality: '',
   coverImage: '',
   isFeatured: false,
   cuisine: '',
@@ -37,6 +41,8 @@ const blankForm = {
 function buildPayload(vertical, form) {
   const base = {
     city: form.city,
+    cityId: form.cityId,
+    locality: form.locality,
     description: form.description,
     coverImage:
       form.coverImage ||
@@ -50,10 +56,16 @@ function buildPayload(vertical, form) {
       }),
     isFeatured: form.isFeatured,
   };
+  if (form.lat && form.lng) {
+    base.location = { lat: Number(form.lat), lng: Number(form.lng) };
+    base.locationGeo = { type: 'Point', coordinates: [Number(form.lng), Number(form.lat)] };
+  }
   if (vertical === 'dining') {
     return {
       ...base,
       name: form.name,
+      location: { lat: Number(form.lat) || 0, lng: Number(form.lng) || 0 },
+      locationGeo: { type: 'Point', coordinates: [Number(form.lng) || 0, Number(form.lat) || 0] },
       cuisine: form.cuisine ? form.cuisine.split(',').map((c) => c.trim()) : [],
       costForTwo: Number(form.costForTwo),
     };
@@ -88,6 +100,8 @@ export default function ManageListingsPage() {
   }, [api]);
 
   useEffect(load, [load]);
+
+  const locationCtx = useLocation();
 
   const remove = async () => {
     try {
@@ -177,9 +191,14 @@ export default function ManageListingsPage() {
           mode={modal.mode}
           item={modal.item}
           onClose={() => setModal(null)}
-          onSaved={() => {
+          onSaved={(savedItem) => {
             setModal(null);
-            load();
+            if (savedItem?._id) {
+              setItems((prev) => {
+                const next = prev.filter((i) => i._id !== savedItem._id);
+                return [savedItem, ...next];
+              });
+            }
           }}
         />
       )}
@@ -201,12 +220,16 @@ export default function ManageListingsPage() {
 function ListingFormModal({ vertical, mode, item, onClose, onSaved }) {
   const cfg = VERTICAL_CONFIG[vertical];
   const api = listingApiFor(vertical);
+  const locationCtx = useLocation();
+
   const [form, setForm] = useState(() => ({
     ...blankForm,
     ...(item && {
       name: titleOf(item),
       description: item.description || '',
       city: item.city,
+      cityId: item.cityId || '',
+      locality: item.locality || '',
       coverImage: item.coverImage || '',
       isFeatured: item.isFeatured || false,
       cuisine: (item.cuisine || []).join(', '),
@@ -218,6 +241,26 @@ function ListingFormModal({ vertical, mode, item, onClose, onSaved }) {
   }));
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    setForm({
+      ...blankForm,
+      ...(item && {
+        name: titleOf(item),
+        description: item.description || '',
+        city: item.city,
+        cityId: item.cityId || '',
+        locality: item.locality || '',
+        coverImage: item.coverImage || '',
+        isFeatured: item.isFeatured || false,
+        cuisine: (item.cuisine || []).join(', '),
+        costForTwo: item.costForTwo || 1500,
+        language: item.language || 'English',
+        duration: item.duration || 120,
+        category: item.category || EVENT_CATEGORIES[0],
+      }),
+    });
+  }, [item, vertical]);
+
   const set = (key) => (e) =>
     setForm({ ...form, [key]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
 
@@ -227,10 +270,9 @@ function ListingFormModal({ vertical, mode, item, onClose, onSaved }) {
     setSaving(true);
     try {
       const payload = buildPayload(vertical, form);
-      if (mode === 'edit') await api.update(item._id, payload);
-      else await api.create(payload);
+      const savedItem = mode === 'edit' ? await api.update(item._id, payload) : await api.create(payload);
       toast.success(mode === 'edit' ? 'Listing updated' : 'Listing created');
-      onSaved();
+      onSaved(savedItem);
     } catch (err) {
       toast.error(err.message || 'Could not save');
     } finally {
@@ -251,10 +293,15 @@ function ListingFormModal({ vertical, mode, item, onClose, onSaved }) {
         <div className="grid gap-4 sm:grid-cols-2">
           <Select
             label="City"
-            value={form.city}
-            onChange={set('city')}
-            options={CITIES.map((c) => ({ value: c, label: c }))}
+            value={form.cityId || form.city}
+            onChange={(e) => {
+              const v = e.target.value;
+              const found = locationCtx.cities.find((c) => c._id === v || c.cityName === v);
+              setForm({ ...form, city: found ? found.cityName : v, cityId: found ? found._id : '' });
+            }}
+            options={[...locationCtx.cities.map((c) => ({ value: c._id, label: c.cityName })), ...(locationCtx.cities.length===0?[]:[])]}
           />
+          <Input label="Locality / Area" value={form.locality} onChange={(e) => setForm({ ...form, locality: e.target.value })} />
           {vertical === 'dining' && (
             <Input label="Cost for two (₹)" type="number" value={form.costForTwo} onChange={set('costForTwo')} />
           )}
@@ -286,12 +333,17 @@ function ListingFormModal({ vertical, mode, item, onClose, onSaved }) {
           <Input label="Start date" type="date" value={form.startDate} onChange={set('startDate')} />
         )}
 
-        <Input
-          label="Cover image URL"
+        <ImageUploader
           value={form.coverImage}
-          onChange={set('coverImage')}
-          placeholder="Leave blank for an auto-generated image"
+          onChange={(url) => setForm((f) => ({ ...f, coverImage: url }))}
+          hint="Uploads to Cloudinary · leave empty for auto-generated artwork"
         />
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Input label="Latitude" value={form.lat || ''} onChange={(e) => setForm({ ...form, lat: e.target.value })} />
+          <Input label="Longitude" value={form.lng || ''} onChange={(e) => setForm({ ...form, lng: e.target.value })} />
+          <Input label="Locality (optional)" value={form.locality || ''} onChange={(e) => setForm({ ...form, locality: e.target.value })} />
+        </div>
 
         <label className="flex items-center gap-2.5 text-sm text-slate-300">
           <input

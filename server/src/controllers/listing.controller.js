@@ -38,10 +38,40 @@ export function createListingController(Model, typeName) {
       searchFields: searchFieldsByType[typeName],
     });
 
-    if (req.query.city) filter.city = req.query.city;
+    if (req.query.cityId) filter.cityId = req.query.cityId;
+    else if (req.query.city) filter.city = req.query.city;
     if (req.query.featured === 'true') filter.isFeatured = true;
     filter.isActive = true;
     filterStrategies[typeName]?.(req.query, filter);
+
+    // Proximity search: if lat/lng provided, use aggregation with $geoNear
+    const lat = req.query.lat ? Number(req.query.lat) : null;
+    const lng = req.query.lng ? Number(req.query.lng) : null;
+    if (lat !== null && lng !== null) {
+      const near = { type: 'Point', coordinates: [lng, lat] };
+      const maxDistance = req.query.maxDistance ? Number(req.query.maxDistance) : undefined;
+      const pipeline = [];
+      pipeline.push({
+        $geoNear: Object.assign(
+          {
+            near,
+            distanceField: 'distance',
+            spherical: true,
+            query: filter,
+          },
+          maxDistance ? { maxDistance } : {},
+        ),
+      });
+      if (sort) pipeline.push({ $sort: sort });
+      pipeline.push({ $skip: skip });
+      pipeline.push({ $limit: limit });
+
+      const [items, totalArr] = await Promise.all([
+        Model.aggregate(pipeline),
+        Model.countDocuments(filter),
+      ]);
+      return paginated(res, items, { page, limit, total: totalArr });
+    }
 
     const [items, total] = await Promise.all([
       Model.find(filter).sort(sort).skip(skip).limit(limit).lean(),
@@ -82,11 +112,11 @@ export function createListingController(Model, typeName) {
   const getSimilar = asyncHandler(async (req, res) => {
     const base = await Model.findById(req.params.id).lean();
     if (!base) throw ApiError.notFound(`${typeName} not found`);
-    const items = await Model.find({
-      _id: { $ne: base._id },
-      city: base.city,
-      isActive: true,
-    })
+      const items = await Model.find({
+        _id: { $ne: base._id },
+        cityId: base.cityId || base.city,
+        isActive: true,
+      })
       .sort({ rating: -1 })
       .limit(6)
       .lean();

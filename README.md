@@ -26,7 +26,7 @@ its own branding.
 - JWT auth + bcrypt, role-based authorization (`user` / `admin`)
 - Zod validation middleware, global error handling, consistent responses
 - Pagination, filtering, search, rate limiting, Helmet, CORS, compression
-- Cloudinary uploads, Razorpay payments, Nodemailer emails — all optional with
+- Cloudinary uploads, Razorpay payments, Brevo emails — all optional with
   graceful mock fallbacks so the app runs with **zero external keys**
 
 ---
@@ -44,7 +44,7 @@ its own branding.
 | Payments    | Razorpay (mock-mode fallback)                         |
 | Media       | Cloudinary (optional)                                 |
 | Maps        | Leaflet + React-Leaflet                               |
-| Email       | Nodemailer (console fallback)                         |
+| Email       | Brevo (console fallback)                              |
 
 ---
 

@@ -76,7 +76,7 @@ export default function ListingCard({ vertical: verticalProp, item, index = 0 })
       transition={{ duration: 0.4, delay: Math.min(index * 0.05, 0.3) }}
     >
       <Link to={href} className="card-interactive group block">
-        <div className="relative aspect-[4/3] overflow-hidden">
+        <div className="relative aspect-[4/5] sm:aspect-[4/3] overflow-hidden">
           <LazyImage
             src={item.coverImage || fallbackImage}
             alt={titleOf(item)}

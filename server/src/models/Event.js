@@ -24,6 +24,8 @@ const eventSchema = new mongoose.Schema(
       index: true,
     },
     city: { type: String, required: true, index: true },
+    cityId: { type: mongoose.Schema.Types.ObjectId, ref: 'City', index: true },
+    locality: { type: String, default: '' },
     venue: {
       name: { type: String, default: '' },
       address: { type: String, default: '' },
@@ -31,6 +33,10 @@ const eventSchema = new mongoose.Schema(
     location: {
       lat: { type: Number, default: 12.9716 },
       lng: { type: Number, default: 77.5946 },
+    },
+    locationGeo: {
+      type: { type: String, enum: ['Point'], default: 'Point' },
+      coordinates: { type: [Number], default: [77.5946, 12.9716] },
     },
     startDate: { type: Date, required: true, index: true },
     endDate: { type: Date },
@@ -49,6 +55,7 @@ const eventSchema = new mongoose.Schema(
 );
 
 eventSchema.index({ title: 'text', description: 'text', tags: 'text' });
+eventSchema.index({ locationGeo: '2dsphere' });
 
 eventSchema.virtual('priceFrom').get(function priceFrom() {
   if (!this.ticketTypes?.length) return 0;

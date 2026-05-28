@@ -1,6 +1,6 @@
 # Deployment Guide
 
-District deploys as three pieces:
+Bookify deploys as three pieces:
 
 | Piece     | Platform        | Cost  |
 |-----------|-----------------|-------|
@@ -16,7 +16,7 @@ District deploys as three pieces:
 2. **Database Access** → add a user with a username & password.
 3. **Network Access** → allow `0.0.0.0/0` (or Render's IPs).
 4. Copy the connection string:
-   `mongodb+srv://<user>:<pass>@cluster0.xxxx.mongodb.net/district`
+   `mongodb+srv://<user>:<pass>@cluster0.xxxx.mongodb.net/bookify`
 
 ---
 
@@ -40,6 +40,9 @@ District deploys as three pieces:
    | `RAZORPAY_KEY_ID` *(optional)*     | Razorpay key id        |
    | `RAZORPAY_KEY_SECRET` *(optional)* | Razorpay key secret    |
    | `CLOUDINARY_*` *(optional)*      | cloud credentials        |
+   | `BREVO_API_KEY` *(optional)*        | Brevo API key            |
+   | `BREVO_SENDER_EMAIL` *(optional)*   | verified sender email    |
+   | `BREVO_SENDER_NAME` *(optional)*    | sender display name      |
 
 5. Deploy. Once live, **seed the database once** from the Render Shell:
    ```bash

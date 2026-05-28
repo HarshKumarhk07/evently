@@ -7,7 +7,6 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useLocation } from '../../context/LocationContext.jsx';
-import { POPULAR_CITIES, ALL_CITIES } from '../../lib/constants.js';
 import { cn } from '../../lib/cn.js';
 
 /* A small lucide icon per popular city — gives the grid the visual variety
@@ -26,25 +25,34 @@ const CITY_ICON = {
   Mumbai:       Landmark,
   Pune:         Castle,
 };
-
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
-function pickNearestCity(lat, lng) {
-  let best = POPULAR_CITIES[0];
+function pickNearestCityFromList(list = [], lat, lng) {
+  if (!list || !list.length) return null;
+  let best = list[0];
   let bestScore = Number.POSITIVE_INFINITY;
-  for (const c of POPULAR_CITIES) {
-    const score = (c.lat - lat) ** 2 + (c.lng - lng) ** 2;
+  for (const c of list) {
+    let clat = 0;
+    let clng = 0;
+    if (c.location?.coordinates?.length === 2) {
+      clng = c.location.coordinates[0];
+      clat = c.location.coordinates[1];
+    } else if (c.lat !== undefined && c.lng !== undefined) {
+      clat = c.lat;
+      clng = c.lng;
+    }
+    const score = (clat - lat) ** 2 + (clng - lng) ** 2;
     if (score < bestScore) {
       bestScore = score;
       best = c;
     }
   }
-  return best.name;
+  return best?.cityName || null;
 }
 
 /* City picker shown on the left of the navbar. */
 export default function LocationSelector() {
-  const { city, setCity } = useLocation();
+  const { cities, city, setCity, detectNearest } = useLocation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [letter, setLetter] = useState('A');
@@ -75,31 +83,34 @@ export default function LocationSelector() {
 
   /* Search filters both popular and all-cities. The A–Z letter filter
      only applies when there's no active search. */
-  const popularFiltered = useMemo(
-    () =>
-      searching
-        ? POPULAR_CITIES.filter((c) => c.name.toLowerCase().includes(trimmed))
-        : POPULAR_CITIES,
-    [searching, trimmed],
-  );
+  const popularFiltered = useMemo(() => {
+    const popular = cities.filter((c) => c.isPopular);
+    return searching
+      ? popular.filter((c) => c.cityName.toLowerCase().includes(trimmed))
+      : popular;
+  }, [cities, searching, trimmed]);
+
+  const allNames = useMemo(() => cities.map((c) => c.cityName), [cities]);
 
   const allFiltered = useMemo(() => {
-    if (searching) {
-      return ALL_CITIES.filter((c) => c.toLowerCase().includes(trimmed));
-    }
-    return ALL_CITIES.filter((c) => c[0]?.toUpperCase() === letter);
-  }, [searching, trimmed, letter]);
+    if (searching) return allNames.filter((n) => n.toLowerCase().includes(trimmed));
+    return allNames.filter((n) => n[0]?.toUpperCase() === letter);
+  }, [allNames, searching, trimmed, letter]);
 
-  /* Which letters actually have a city — others are dimmed. */
   const activeLetters = useMemo(
-    () => new Set(ALL_CITIES.map((c) => c[0]?.toUpperCase()).filter(Boolean)),
-    [],
+    () => new Set(allNames.map((c) => c[0]?.toUpperCase()).filter(Boolean)),
+    [allNames],
   );
 
-  const select = (next) => {
-    setCity(next);
-    setOpen(false);
-    toast.success(`Switched to ${next}`);
+  const select = (nextName) => {
+    const next = cities.find((c) => c.cityName === nextName);
+    if (next) {
+      setCity(next);
+      setOpen(false);
+      toast.success(`Switched to ${next.cityName}`);
+    } else {
+      toast.error('City not found');
+    }
   };
 
   const useCurrentLocation = () => {
@@ -109,10 +120,23 @@ export default function LocationSelector() {
     }
     setDetecting(true);
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setDetecting(false);
-        const next = pickNearestCity(position.coords.latitude, position.coords.longitude);
-        select(next);
+      async (position) => {
+        try {
+          const found = await detectNearest(position.coords.latitude, position.coords.longitude);
+          setDetecting(false);
+          if (found) {
+            setCity(found);
+            setOpen(false);
+            toast.success(`Detected ${found.cityName}`);
+            return;
+          }
+          // fallback to client-side nearest
+          const f = pickNearestCityFromList(cities, position.coords.latitude, position.coords.longitude);
+          if (f) select(f);
+        } catch (err) {
+          setDetecting(false);
+          toast.error('Could not detect your location');
+        }
       },
       () => {
         setDetecting(false);
@@ -122,22 +146,27 @@ export default function LocationSelector() {
     );
   };
 
-  const panel = (
+  /* Portal is mounted unconditionally so AnimatePresence sees the motion.div
+     as its direct child and can actually mount/animate it. */
+  const panel = createPortal(
     <AnimatePresence>
-      {open &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
+      {open && (
+        <motion.div
+          key="loc-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm"
+          onClick={() => setOpen(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.96, y: 18 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.98, y: 10 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+            onClick={(e) => e.stopPropagation()}
+            className="flex max-h-[88vh] w-[min(94vw,960px)] flex-col overflow-hidden rounded-[28px] bg-white text-slate-900 shadow-[0_40px_120px_rgba(0,0,0,.45)]"
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 18 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.98, y: 10 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-              onClick={(e) => e.stopPropagation()}
-              className="flex max-h-[88vh] w-[min(94vw,960px)] flex-col overflow-hidden rounded-[28px] bg-white text-slate-900 shadow-[0_40px_120px_rgba(0,0,0,.45)]"
-            >
               {/* Header */}
               <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5 sm:px-8">
                 <div>
@@ -194,12 +223,12 @@ export default function LocationSelector() {
                   ) : (
                     <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
                       {popularFiltered.map((c) => {
-                        const Icon = CITY_ICON[c.name] || Landmark;
-                        const selected = c.name === city;
+                        const Icon = CITY_ICON[c.cityName] || Landmark;
+                        const selected = c.cityName === city?.cityName;
                         return (
                           <button
-                            key={c.name}
-                            onClick={() => select(c.name)}
+                            key={c.cityName}
+                            onClick={() => select(c.cityName)}
                             className={cn(
                               'group flex flex-col items-center justify-center rounded-2xl border px-2 py-4 text-center transition-all',
                               selected
@@ -259,7 +288,7 @@ export default function LocationSelector() {
                   {allFiltered.length > 0 ? (
                     <div className="mt-4 grid grid-cols-2 gap-y-2 gap-x-6 sm:grid-cols-3 md:grid-cols-4">
                       {allFiltered.map((name) => {
-                        const selected = name === city;
+                        const selected = name === city?.cityName;
                         return (
                           <button
                             key={name}
@@ -286,11 +315,11 @@ export default function LocationSelector() {
                   )}
                 </div>
               </div>
-            </motion.div>
-          </div>,
-          document.body,
-        )}
-    </AnimatePresence>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>,
+    document.body,
   );
 
   return (
@@ -302,7 +331,7 @@ export default function LocationSelector() {
         aria-expanded={open}
       >
         <MapPin className="h-4 w-4 text-brand-400" />
-        <span className="hidden font-medium text-white sm:inline">{city}</span>
+        <span className="hidden font-medium text-white sm:inline">{city?.cityName || 'Select city'}</span>
         <ChevronDown
           className={cn('h-3.5 w-3.5 text-slate-400 transition-transform', open && 'rotate-180')}
         />

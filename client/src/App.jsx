@@ -27,6 +27,7 @@ const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard.jsx'));
 const ManageListingsPage = lazy(() => import('./pages/admin/ManageListingsPage.jsx'));
 const ManageBookingsPage = lazy(() => import('./pages/admin/ManageBookingsPage.jsx'));
 const ManageUsersPage = lazy(() => import('./pages/admin/ManageUsersPage.jsx'));
+const ManageCitiesPage = lazy(() => import('./pages/admin/ManageCitiesPage.jsx'));
 
 export default function App() {
   return (
@@ -101,6 +102,7 @@ export default function App() {
               <Route path="listings" element={<ManageListingsPage />} />
               <Route path="bookings" element={<ManageBookingsPage />} />
               <Route path="users" element={<ManageUsersPage />} />
+              <Route path="cities" element={<ManageCitiesPage />} />
             </Route>
 
             <Route path="*" element={<NotFoundPage />} />

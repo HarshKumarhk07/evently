@@ -16,4 +16,10 @@ router.get('/bookings', admin.listBookings);
 router.patch('/bookings/:id', admin.updateBookingStatus);
 router.post('/uploads', upload.single('image'), uploadImage);
 
+// Admin: manage cities
+import * as city from '../controllers/city.controller.js';
+router.post('/cities', city.createCity);
+router.patch('/cities/:id', city.updateCity);
+router.delete('/cities/:id', city.deleteCity);
+
 export default router;

@@ -7,6 +7,8 @@ import bookingRoutes from './booking.routes.js';
 import reviewRoutes from './review.routes.js';
 import userRoutes from './user.routes.js';
 import adminRoutes from './admin.routes.js';
+import cityRoutes from './city.routes.js';
+import geocodeRoutes from './geocode.routes.js';
 
 const router = Router();
 
@@ -22,5 +24,7 @@ router.use('/bookings', bookingRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/users', userRoutes);
 router.use('/admin', adminRoutes);
+router.use('/cities', cityRoutes);
+router.use('/geocode', geocodeRoutes);
 
 export default router;

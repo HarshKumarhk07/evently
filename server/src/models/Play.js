@@ -21,6 +21,8 @@ const playSchema = new mongoose.Schema(
     duration: { type: Number, default: 120 },
     ageRating: { type: String, default: 'U/A' },
     city: { type: String, required: true, index: true },
+    cityId: { type: mongoose.Schema.Types.ObjectId, ref: 'City', index: true },
+    locality: { type: String, default: '' },
     venue: {
       name: { type: String, default: '' },
       address: { type: String, default: '' },
@@ -28,6 +30,10 @@ const playSchema = new mongoose.Schema(
     location: {
       lat: { type: Number, default: 12.9716 },
       lng: { type: Number, default: 77.5946 },
+    },
+    locationGeo: {
+      type: { type: String, enum: ['Point'], default: 'Point' },
+      coordinates: { type: [Number], default: [77.5946, 12.9716] },
     },
     coverImage: { type: String, default: '' },
     gallery: [{ type: String }],
@@ -57,6 +63,8 @@ playSchema.virtual('priceFrom').get(function priceFrom() {
 
 playSchema.set('toJSON', { virtuals: true });
 playSchema.set('toObject', { virtuals: true });
+
+playSchema.index({ locationGeo: '2dsphere' });
 
 playSchema.pre('validate', function setSlug(next) {
   if (this.isModified('title') || !this.slug) {

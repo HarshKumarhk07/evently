@@ -4,12 +4,14 @@ import { Sparkles, TrendingUp, Drama, CalendarClock } from 'lucide-react';
 import HeroCarousel from '../components/home/HeroCarousel.jsx';
 import HeroSearch from '../components/home/HeroSearch.jsx';
 import VerticalCards from '../components/home/VerticalCards.jsx';
+import MobileHeader from '../components/home/MobileHeader.jsx';
 import SectionHeader from '../components/listing/SectionHeader.jsx';
 import ListingRow from '../components/listing/ListingRow.jsx';
 import { restaurantsApi, playsApi, eventsApi } from '../api/listings.api.js';
 import { usersApi } from '../api/users.api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { titleOf, REFTYPE_TO_VERTICAL } from '../lib/listings.js';
+import { useLocation } from '../context/LocationContext.jsx';
 
 const STATS = [
   { value: '1,200+', label: 'Venues & experiences' },
@@ -20,15 +22,18 @@ const STATS = [
 
 export default function HomePage() {
   const { user, isAuthenticated } = useAuth();
+  const location = useLocation();
   const [data, setData] = useState({ dining: [], plays: [], events: [] });
   const [loading, setLoading] = useState(true);
   const [recentlyViewed, setRecentlyViewed] = useState([]);
 
   useEffect(() => {
+    const cityParam = {};
+    if (location?.city?._id) cityParam.cityId = location.city._id;
     Promise.all([
-      restaurantsApi.list({ sort: 'rating', limit: 10 }).then((d) => d.items),
-      playsApi.list({ sort: 'rating', limit: 10 }).then((d) => d.items),
-      eventsApi.list({ sort: 'newest', limit: 10 }).then((d) => d.items),
+      restaurantsApi.list({ sort: 'rating', limit: 10, ...cityParam }).then((d) => d.items),
+      playsApi.list({ sort: 'rating', limit: 10, ...cityParam }).then((d) => d.items),
+      eventsApi.list({ sort: 'newest', limit: 10, ...cityParam }).then((d) => d.items),
     ])
       .then(([dining, plays, events]) => setData({ dining, plays, events }))
       .catch(() => setData({ dining: [], plays: [], events: [] }))
@@ -78,6 +83,7 @@ export default function HomePage() {
 
   return (
     <div className="pb-10">
+      <MobileHeader />
       {/* Hero */}
       <section className="section pt-8">
         <div className="grid items-center gap-8 lg:grid-cols-[1.05fr_1.35fr]">

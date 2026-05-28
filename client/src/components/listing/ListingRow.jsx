@@ -5,12 +5,12 @@ import { CardSkeleton } from '../ui/Skeleton.jsx';
 export default function ListingRow({ vertical, items = [], loading = false }) {
   const content = loading
     ? Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="w-[260px] shrink-0 sm:w-[300px]">
+        <div key={i} className="w-[85vw] shrink-0 sm:w-[300px]">
           <CardSkeleton />
         </div>
       ))
     : items.map((item, i) => (
-        <div key={item._id} className="w-[260px] shrink-0 sm:w-[300px]">
+        <div key={item._id} className="w-[85vw] shrink-0 sm:w-[300px]">
           <ListingCard vertical={vertical} item={item} index={i} />
         </div>
       ));

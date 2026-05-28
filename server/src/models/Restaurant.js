@@ -15,10 +15,16 @@ const restaurantSchema = new mongoose.Schema(
     priceRange: { type: Number, min: 1, max: 4, default: 2 },
     costForTwo: { type: Number, default: 1500 },
     city: { type: String, required: true, index: true },
+    cityId: { type: mongoose.Schema.Types.ObjectId, ref: 'City', index: true },
+    locality: { type: String, default: '' },
     address: { type: String, default: '' },
     location: {
       lat: { type: Number, default: 12.9716 },
       lng: { type: Number, default: 77.5946 },
+    },
+    locationGeo: {
+      type: { type: String, enum: ['Point'], default: 'Point' },
+      coordinates: { type: [Number], default: [77.5946, 12.9716] },
     },
     coverImage: { type: String, default: '' },
     images: [imageSchema],
@@ -45,6 +51,7 @@ const restaurantSchema = new mongoose.Schema(
 );
 
 restaurantSchema.index({ name: 'text', description: 'text', cuisine: 'text' });
+restaurantSchema.index({ locationGeo: '2dsphere' });
 
 restaurantSchema.pre('validate', function setSlug(next) {
   if (this.isModified('name') || !this.slug) {
