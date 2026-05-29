@@ -12,6 +12,7 @@ import { useInfiniteScroll } from '../hooks/useInfiniteScroll.js';
 import { useMediaQuery } from '../hooks/useMediaQuery.js';
 import { useLocation } from '../context/LocationContext.jsx';
 import { listingApiFor } from '../api/listings.api.js';
+import { navLinksApi } from '../api/navLinks.api.js';
 import { SORT_OPTIONS, PRICE_RANGES } from '../lib/constants.js';
 
 const HERO = {
@@ -23,13 +24,15 @@ const HERO = {
   },
   plays: {
     title: 'Plays',
-    subtitle: 'Drama, comedy and classics staged across the city’s finest theatres.',
-    image: '/play%20cover.jpg',
+    subtitle: 'Theatre, sports and turf bookings across the city.',
+    image:
+      'https://images.unsplash.com/photo-1577223625816-7546f13df25d?auto=format&fit=crop&w=1600&q=80',
   },
   events: {
     title: 'Events',
     subtitle: 'Concerts, comedy, festivals and workshops — all in one place.',
-    image: '/eventCover.jpg',
+    image:
+      'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=1600&q=80',
   },
 };
 
@@ -47,8 +50,10 @@ const emptyFilters = {
 /* Builds API query params from the active filter state. */
 function toParams(filters, city, page) {
   const params = { page, limit: 12 };
+  /* Send both — the backend ORs them so listings created before cityId was
+     tracked still match by name. */
   if (city?._id) params.cityId = city._id;
-  else if (city?.cityName) params.city = city.cityName;
+  if (city?.cityName) params.city = city.cityName;
   if (filters.search) params.search = filters.search;
   if (filters.sort) params.sort = filters.sort;
   if (filters.minRating) params.minRating = filters.minRating;
@@ -67,7 +72,41 @@ function toParams(filters, city, page) {
 
 /* Shared explorer page powering /dining, /plays and /events. */
 export default function ListingPage({ vertical }) {
-  const hero = HERO[vertical];
+  const defaultHero = HERO[vertical];
+  const [navHero, setNavHero] = useState(null);
+  const hero = {
+    title: defaultHero.title,
+    subtitle: navHero?.heroSubtitle || defaultHero.subtitle,
+    image: navHero?.heroImage || defaultHero.image,
+  };
+
+  /* Pull the matching NavLink (path = /dining etc.) so the admin's custom
+     hero image + subtitle (if any) override the bundled defaults. We
+     explicitly reset to `null` first so a hero saved for one vertical does
+     not bleed into a sibling page when the user navigates between them. */
+  useEffect(() => {
+    let cancelled = false;
+    setNavHero(null);
+    const path = `/${vertical}`;
+    navLinksApi
+      .list()
+      .then((items) => {
+        if (cancelled) return;
+        const match = (items || []).find((n) => n.path === path);
+        if (match && (match.heroImage || match.heroSubtitle)) {
+          setNavHero(match);
+        } else {
+          setNavHero(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setNavHero(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [vertical]);
+
   const api = listingApiFor(vertical);
   const { city } = useLocation();
   const isDesktop = useMediaQuery('(min-width: 1024px)');

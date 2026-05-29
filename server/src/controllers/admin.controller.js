@@ -5,7 +5,7 @@ import Event from '../models/Event.js';
 import Booking from '../models/Booking.js';
 import ApiError from '../utils/ApiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
-import { ok, paginated } from '../utils/ApiResponse.js';
+import { ok, created, paginated } from '../utils/ApiResponse.js';
 import { emailService } from '../services/email.service.js';
 
 function escapeRegExp(value) {
@@ -264,17 +264,82 @@ export const sendTestEmail = asyncHandler(async (req, res) => {
   return ok(res, result, result.ok ? 'Test email sent' : 'Test email failed');
 });
 
-/* PATCH /api/admin/bookings/:id — override a booking status. */
+/* PATCH /api/admin/bookings/:id — override a booking status. Keeps the
+   paymentStatus in sync so revenue analytics stay correct when an admin
+   confirms / cancels / completes a booking manually. */
 export const updateBookingStatus = asyncHandler(async (req, res) => {
   const { status } = req.body;
   if (!['pending', 'confirmed', 'cancelled', 'completed'].includes(status)) {
     throw ApiError.badRequest('Invalid status');
   }
-  const booking = await Booking.findByIdAndUpdate(
-    req.params.id,
-    { status },
-    { new: true },
-  );
+  const booking = await Booking.findById(req.params.id);
   if (!booking) throw ApiError.notFound('Booking not found');
+
+  booking.status = status;
+  if (status === 'confirmed' || status === 'completed') {
+    if (booking.amount > 0) booking.paymentStatus = 'paid';
+  } else if (status === 'cancelled') {
+    if (booking.paymentStatus === 'paid') booking.paymentStatus = 'refunded';
+    else booking.paymentStatus = 'unpaid';
+  }
+  await booking.save();
   return ok(res, booking, 'Booking updated');
+});
+
+/* POST /api/admin/managers — admin creates a new manager directly,
+   bypassing the OTP / self-registration flow. Marked verified + approved
+   immediately so the new manager can start listing right away. */
+export const adminCreateManager = asyncHandler(async (req, res) => {
+  const {
+    name,
+    email,
+    password,
+    phone,
+    city,
+    businessName,
+    businessType,
+    businessAddress,
+    panNumber = '',
+    aadhaarNumber = '',
+    gstNumber = '',
+  } = req.body;
+
+  if (!name?.trim()) throw ApiError.badRequest('Name is required');
+  if (!email?.trim()) throw ApiError.badRequest('Email is required');
+  if (!password || password.length < 6) {
+    throw ApiError.badRequest('Password must be at least 6 characters');
+  }
+  if (!businessName?.trim()) throw ApiError.badRequest('Business name is required');
+
+  const normalized = email.toLowerCase().trim();
+  const existing = await User.findOne({ email: normalized });
+  if (existing) throw ApiError.conflict('An account with this email already exists');
+
+  const user = await User.create({
+    name: name.trim(),
+    email: normalized,
+    password,
+    phone: phone || '',
+    city: city || '',
+    role: 'manager',
+    provider: 'email',
+    isVerified: true,
+    managerProfile: {
+      businessName: businessName.trim(),
+      businessType: businessType || 'Restaurant',
+      businessAddress: businessAddress || '',
+      panNumber: (panNumber || '').toUpperCase(),
+      aadhaarNumber: aadhaarNumber || '',
+      gstNumber: gstNumber || '',
+      status: 'approved',
+      approvedAt: new Date(),
+      approvedBy: req.user._id,
+      businessLicense: {},
+      idProof: {},
+      businessImages: [],
+      bankDetails: {},
+    },
+  });
+
+  return created(res, user, 'Manager created');
 });

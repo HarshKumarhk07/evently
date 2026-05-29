@@ -40,6 +40,7 @@ export const eventSchema = z.object({
   title: z.string().min(2),
   description: z.string().optional(),
   category: z.string().optional(),
+  subcategory: z.string().optional(),
   city: z.string().min(2),
   startDate: z.string(),
   endDate: z.string().optional(),

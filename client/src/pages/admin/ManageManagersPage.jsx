@@ -3,7 +3,7 @@ import {
   Search, Building2, FileText, IdCard, MapPin, Check, X,
   ShieldCheck, CircleAlert, MailCheck, ExternalLink, Mail, Calendar,
   Landmark, Image as ImageIcon, FileCheck2, ZoomIn, ChevronRight,
-  CreditCard, Hash, AlertCircle,
+  CreditCard, Hash, AlertCircle, Plus,
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -21,11 +21,11 @@ import { adminApi } from '../../api/admin.api.js';
 import { formatDate, relativeTime } from '../../lib/format.js';
 
 const STATUS_TABS = [
+  { value: 'all',              label: 'All' },
   { value: 'pending_approval', label: 'Pending' },
   { value: 'approved',         label: 'Approved' },
   { value: 'rejected',         label: 'Rejected' },
   { value: 'pending_email',    label: 'Unverified' },
-  { value: 'all',              label: 'All' },
 ];
 
 const STATUS_META = {
@@ -46,7 +46,7 @@ const TONE_BG = {
 /* ───────────────────────────────────────────────────────────── */
 
 export default function ManageManagersPage() {
-  const [tab, setTab] = useState('pending_approval');
+  const [tab, setTab] = useState('all');
   const [search, setSearch] = useState('');
   const debounced = useDebounce(search, 400);
 
@@ -55,6 +55,7 @@ export default function ManageManagersPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [rejectFor, setRejectFor] = useState(null);
+  const [creating, setCreating] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -108,13 +109,18 @@ export default function ManageManagersPage() {
             Review applications, verify documents and grant access.
           </p>
         </div>
-        <div className="w-64">
-          <Input
-            icon={Search}
-            placeholder="Search by name, email, business"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="flex items-center gap-3">
+          <div className="w-64">
+            <Input
+              icon={Search}
+              placeholder="Search by name, email, business"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <Button icon={Plus} onClick={() => setCreating(true)}>
+            Add manager
+          </Button>
         </div>
       </div>
 
@@ -157,7 +163,137 @@ export default function ManageManagersPage() {
           onConfirm={(reason) => reject(rejectFor._id, reason)}
         />
       )}
+
+      {creating && (
+        <CreateManagerModal
+          onClose={() => setCreating(false)}
+          onCreated={() => {
+            setCreating(false);
+            load();
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+/* ────────── Admin: add a new manager directly ────────────────── */
+
+function CreateManagerModal({ onClose, onCreated }) {
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    phone: '',
+    city: '',
+    businessName: '',
+    businessType: 'Restaurant',
+    businessAddress: '',
+    panNumber: '',
+    aadhaarNumber: '',
+    gstNumber: '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  const update = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!form.name.trim()) return toast.error('Name is required');
+    if (!/^\S+@\S+\.\S+$/.test(form.email)) return toast.error('Valid email required');
+    if (form.password.length < 6) return toast.error('Password must be at least 6 characters');
+    if (!form.businessName.trim()) return toast.error('Business name is required');
+    setSaving(true);
+    try {
+      await adminApi.createManager(form);
+      toast.success('Manager created and approved');
+      onCreated();
+    } catch (err) {
+      toast.error(err.message || 'Could not create manager');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal open onClose={onClose} title="Add a new manager" size="lg">
+      <form onSubmit={submit} className="space-y-4">
+        <p className="rounded-xl border border-brand-500/30 bg-brand-500/[0.05] p-3 text-xs text-brand-200">
+          Managers added here are auto-verified and auto-approved. They can sign
+          in with the email + password you set, and immediately publish listings.
+        </p>
+
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Account
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input label="Full name" value={form.name} onChange={update('name')} />
+            <Input
+              label="Email"
+              type="email"
+              value={form.email}
+              onChange={update('email')}
+            />
+            <Input
+              label="Password"
+              type="password"
+              value={form.password}
+              onChange={update('password')}
+              hint="At least 6 characters"
+            />
+            <Input label="Phone" value={form.phone} onChange={update('phone')} />
+            <Input label="City" value={form.city} onChange={update('city')} />
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Business
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input
+              label="Business name"
+              value={form.businessName}
+              onChange={update('businessName')}
+            />
+            <Input
+              label="Business type"
+              value={form.businessType}
+              onChange={update('businessType')}
+              hint="Restaurant / Play / Turf / Event / Theatre / Activity"
+            />
+            <div className="sm:col-span-2">
+              <Textarea
+                label="Business address"
+                rows={2}
+                value={form.businessAddress}
+                onChange={update('businessAddress')}
+              />
+            </div>
+            <Input
+              label="PAN (optional)"
+              value={form.panNumber}
+              onChange={update('panNumber')}
+            />
+            <Input
+              label="GST (optional)"
+              value={form.gstNumber}
+              onChange={update('gstNumber')}
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-1">
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={saving} icon={Check}>
+            Create &amp; approve
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

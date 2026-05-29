@@ -14,6 +14,10 @@
 
   html {
     scroll-behavior: smooth;
+    /* Prevent any rogue child from forcing horizontal scroll — which on
+       mobile browsers makes the page render zoomed-in until the user
+       pinches out. */
+    overflow-x: hidden;
   }
 
   body {
@@ -21,10 +25,13 @@
     background-image: radial-gradient(at 15% -5%, rgba(124, 58, 237, 0.16) 0, transparent 45%),
       radial-gradient(at 90% 0%, rgba(236, 72, 153, 0.1) 0, transparent 40%);
     background-attachment: fixed;
+    overflow-x: hidden;
   }
+
 
   h1, h2, h3, h4 {
     @apply font-display tracking-tight text-white;
+    overflow-wrap: anywhere;
   }
 
   ::selection {

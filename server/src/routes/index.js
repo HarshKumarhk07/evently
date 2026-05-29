@@ -10,6 +10,9 @@ import adminRoutes from './admin.routes.js';
 import cityRoutes from './city.routes.js';
 import geocodeRoutes from './geocode.routes.js';
 import managerRoutes from './manager.routes.js';
+import categoryRoutes from './category.routes.js';
+import navLinkRoutes from './navLink.routes.js';
+import customListingRoutes from './customListing.routes.js';
 import env from '../config/env.js';
 
 const router = Router();
@@ -29,6 +32,9 @@ router.use('/admin', adminRoutes);
 router.use('/cities', cityRoutes);
 router.use('/geocode', geocodeRoutes);
 router.use('/managers', managerRoutes);
+router.use('/categories', categoryRoutes);
+router.use('/nav-links', navLinkRoutes);
+router.use('/custom-listings', customListingRoutes);
 
 // Development-only mail-check endpoint to inspect mail config and optionally
 // perform a test send. Enabled only when not in production.

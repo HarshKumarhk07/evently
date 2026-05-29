@@ -37,23 +37,23 @@ function TrendChart({ trend }) {
   const max = Math.max(1, ...days.map((d) => d.count));
   const total = days.reduce((s, d) => s + d.count, 0);
 
+  /* Cap = the maximum bar pixel height (= chart height minus label area). */
+  const CAP = 160;
+
   return (
     <div>
-      <div className="flex h-44 items-end gap-2">
+      <div className="flex h-48 items-end gap-2">
         {days.map((d) => {
-          const pct = Math.max(2, (d.count / max) * 100); // min 2% so empty bars still show as a sliver
+          const px = Math.max(4, (d.count / max) * CAP);
           return (
-            <div key={d.key} className="group flex flex-1 flex-col items-stretch">
-              <div className="relative flex w-full flex-1 items-end">
-                <div
-                  className="w-full rounded-t-lg bg-brand-gradient transition-[height] duration-500"
-                  style={{ height: `${pct}%`, opacity: d.count === 0 ? 0.25 : 1 }}
-                >
-                  <span className="absolute -top-6 left-1/2 -translate-x-1/2 rounded bg-ink-700 px-1.5 py-0.5 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100">
-                    {d.count}
-                  </span>
-                </div>
-              </div>
+            <div key={d.key} className="group relative flex flex-1 flex-col items-center">
+              <div
+                className="w-full rounded-t-lg bg-brand-gradient transition-[height] duration-500"
+                style={{ height: `${px}px`, opacity: d.count === 0 ? 0.2 : 1 }}
+              />
+              <span className="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full rounded bg-ink-700 px-1.5 py-0.5 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100">
+                {d.count}
+              </span>
               <span className="mt-2 text-center text-[10px] text-slate-500">{d.label}</span>
             </div>
           );

@@ -20,6 +20,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { useLocation } from '../../context/LocationContext.jsx';
 import { managerApi } from '../../api/manager.api.js';
 import { listingApiFor } from '../../api/listings.api.js';
+import { categoriesApi } from '../../api/categories.api.js';
 import { VERTICAL_CONFIG, titleOf } from '../../lib/listings.js';
 import { CITIES, EVENT_CATEGORIES } from '../../lib/constants.js';
 import { formatCurrency, formatDate, relativeTime, initialsOf } from '../../lib/format.js';
@@ -56,16 +57,18 @@ const STATUS_META = {
 
 const BUSINESS_TYPE_TO_VERTICAL = {
   Restaurant: 'dining',
-  Turf: 'events',
-  Event: 'events',
+  Turf: 'plays',
+  Sports: 'plays',
   Play: 'plays',
+  Theatre: 'events',
+  Event: 'events',
   Activity: 'events',
 };
 
 const VERTICAL_OPTIONS = [
   { value: 'dining', label: 'Restaurant / Dining' },
-  { value: 'plays', label: 'Play / Theatre' },
-  { value: 'events', label: 'Event / Activity / Turf' },
+  { value: 'plays', label: 'Play / Turf / Sports' },
+  { value: 'events', label: 'Event / Theatre / Activity' },
 ];
 
 const BG_BY_TONE = {
@@ -626,6 +629,8 @@ function buildPayload(vertical, form) {
     ...base,
     title: form.name,
     category: form.category,
+    /* Stored on the listing so the filter sidebar can narrow by it. */
+    subcategory: form.subcategory || undefined,
     startDate: form.startDate,
   };
   if (form.ticketPrice) {
@@ -656,6 +661,7 @@ function getInitialForm(item, defaultCity) {
       language: 'English',
       duration: 120,
       category: EVENT_CATEGORIES[0],
+      subcategory: '',
       startDate: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
       ticketPrice: 500,
       totalSeats: 100,
@@ -677,6 +683,7 @@ function getInitialForm(item, defaultCity) {
     language: item.language || 'English',
     duration: item.duration || 120,
     category: item.category || EVENT_CATEGORIES[0],
+    subcategory: item.subcategory || '',
     startDate: item.startDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
     ticketPrice:
       item.seatCategories?.[0]?.price ||
@@ -696,6 +703,10 @@ function CreateListingModal({ open, onClose, defaultVertical, defaultCity, item,
   const [vertical, setVertical] = useState(defaultVertical);
   const [form, setForm] = useState(() => getInitialForm(item, defaultCity));
   const [saving, setSaving] = useState(false);
+  const [eventCategories, setEventCategories] = useState(
+    EVENT_CATEGORIES.map((name) => ({ _id: name, name })),
+  );
+  const [subcategories, setSubcategories] = useState([]);
   const isEdit = Boolean(item);
 
   useEffect(() => {
@@ -703,6 +714,38 @@ function CreateListingModal({ open, onClose, defaultVertical, defaultCity, item,
     setVertical(defaultVertical);
     setForm(getInitialForm(item, defaultCity));
   }, [defaultVertical, defaultCity, item, open]);
+
+  /* Pull admin-managed event categories on open, fall back to the bundled
+     constants so the form is never empty. */
+  useEffect(() => {
+    if (!open) return;
+    categoriesApi
+      .list({ kind: 'category', parentId: 'null' })
+      .then((items) => {
+        if (items?.length) setEventCategories(items);
+      })
+      .catch(() => {});
+  }, [open]);
+
+  /* When a category is picked, pull its sub-categories so the manager can
+     optionally narrow the listing (e.g. Music → Rock). */
+  useEffect(() => {
+    if (vertical !== 'events' || !form.category) {
+      setSubcategories([]);
+      return;
+    }
+    const parent = eventCategories.find((c) => c.name === form.category);
+    if (!parent?._id || typeof parent._id !== 'string' || parent._id === parent.name) {
+      /* Fallback list (just-name objects) has no real id, so we can't fetch
+         sub-categories. Skip silently. */
+      setSubcategories([]);
+      return;
+    }
+    categoriesApi
+      .list({ kind: 'category', parentId: parent._id })
+      .then(setSubcategories)
+      .catch(() => setSubcategories([]));
+  }, [form.category, eventCategories, vertical]);
 
   const set = (key) => (e) =>
     setForm((prev) => ({
@@ -836,8 +879,25 @@ function CreateListingModal({ open, onClose, defaultVertical, defaultCity, item,
                 <Select
                   label="Category"
                   value={form.category}
-                  onChange={set('category')}
-                  options={EVENT_CATEGORIES.map((c) => ({ value: c, label: c }))}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      category: e.target.value,
+                      subcategory: '',
+                    }))
+                  }
+                  options={eventCategories.map((c) => ({ value: c.name, label: c.name }))}
+                />
+              )}
+              {vertical === 'events' && subcategories.length > 0 && (
+                <Select
+                  label="Sub-category (optional)"
+                  value={form.subcategory || ''}
+                  onChange={set('subcategory')}
+                  options={[
+                    { value: '', label: 'Any' },
+                    ...subcategories.map((s) => ({ value: s.name, label: s.name })),
+                  ]}
                 />
               )}
               {vertical === 'dining' && (

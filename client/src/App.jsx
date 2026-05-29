@@ -8,6 +8,7 @@ import { PageLoader } from './components/ui/Spinner.jsx';
 
 /* Route-level code splitting — each page ships as its own chunk. */
 const HomePage = lazy(() => import('./pages/HomePage.jsx'));
+const DynamicCategoryPage = lazy(() => import('./pages/DynamicCategoryPage.jsx'));
 const ListingPage = lazy(() => import('./pages/ListingPage.jsx'));
 const DetailPage = lazy(() => import('./pages/DetailPage.jsx'));
 const LoginPage = lazy(() => import('./pages/auth/LoginPage.jsx'));
@@ -34,6 +35,7 @@ const ManageBookingsPage = lazy(() => import('./pages/admin/ManageBookingsPage.j
 const ManageUsersPage = lazy(() => import('./pages/admin/ManageUsersPage.jsx'));
 const ManageCitiesPage = lazy(() => import('./pages/admin/ManageCitiesPage.jsx'));
 const ManageManagersPage = lazy(() => import('./pages/admin/ManageManagersPage.jsx'));
+const ManageCategoriesPage = lazy(() => import('./pages/admin/ManageCategoriesPage.jsx'));
 
 export default function App() {
   return (
@@ -92,6 +94,7 @@ export default function App() {
               }
             />
 
+            <Route path="c/:slug" element={<DynamicCategoryPage />} />
             <Route path="dining" element={<ListingPage vertical="dining" />} />
             <Route path="dining/:slug" element={<DetailPage vertical="dining" />} />
             <Route path="plays" element={<ListingPage vertical="plays" />} />
@@ -138,6 +141,7 @@ export default function App() {
               <Route path="users" element={<ManageUsersPage />} />
               <Route path="cities" element={<ManageCitiesPage />} />
               <Route path="managers" element={<ManageManagersPage />} />
+              <Route path="categories" element={<ManageCategoriesPage />} />
             </Route>
 
             <Route path="*" element={<NotFoundPage />} />

@@ -14,7 +14,7 @@ import api, { tokenStore } from '../lib/axios.js';
 import { managerApi } from '../api/manager.api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
-const BUSINESS_TYPES = ['Restaurant', 'Turf', 'Event', 'Play', 'Activity'];
+const BUSINESS_TYPES = ['Restaurant', 'Play', 'Turf', 'Sports', 'Event', 'Theatre', 'Activity'];
 
 function Section({ icon: Icon, title, subtitle, children }) {
   return (

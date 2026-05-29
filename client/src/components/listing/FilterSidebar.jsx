@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Star, RotateCcw } from 'lucide-react';
 import {
   CUISINES,
@@ -6,22 +7,38 @@ import {
   PLAY_GENRES,
   EVENT_CATEGORIES,
 } from '../../lib/constants.js';
+import { categoriesApi } from '../../api/categories.api.js';
 import { cn } from '../../lib/cn.js';
 
 /* Filter groups available for each vertical. */
-const CONFIG = {
+const CONFIG_BY_VERTICAL = (lists) => ({
   dining: [
-    { key: 'cuisine', label: 'Cuisine', kind: 'multi', options: CUISINES },
+    { key: 'cuisine', label: 'Cuisine', kind: 'multi', options: lists.cuisine },
     {
       key: 'priceBucket',
       label: 'Price Range',
       kind: 'single',
       options: PRICE_RANGES.map((p) => ({ value: p.value, label: p.label })),
     },
-    { key: 'feature', label: 'Features', kind: 'multi', options: RESTAURANT_FEATURES },
+    { key: 'feature', label: 'Features', kind: 'multi', options: lists.feature },
   ],
-  plays: [{ key: 'genre', label: 'Genre', kind: 'multi', options: PLAY_GENRES }],
-  events: [{ key: 'category', label: 'Category', kind: 'multi', options: EVENT_CATEGORIES }],
+  plays: [{ key: 'genre', label: 'Genre', kind: 'multi', options: lists.genre }],
+  events: [{ key: 'category', label: 'Category', kind: 'multi', options: lists.category }],
+});
+
+/* Default lists used as a fallback while the API call is in-flight or if it
+   fails — keeps the sidebar populated even on first paint. */
+const FALLBACK = {
+  cuisine: CUISINES,
+  feature: RESTAURANT_FEATURES,
+  genre: PLAY_GENRES,
+  category: EVENT_CATEGORIES,
+};
+
+const KIND_BY_VERTICAL = {
+  dining: ['cuisine', 'feature'],
+  plays: ['genre'],
+  events: ['category'],
 };
 
 function normalize(options) {
@@ -30,7 +47,37 @@ function normalize(options) {
 
 /* Sidebar of chip-based filters; the parent owns the `filters` state. */
 export default function FilterSidebar({ vertical, filters, onChange, onReset }) {
-  const groups = CONFIG[vertical] || [];
+  const [lists, setLists] = useState(FALLBACK);
+
+  /* Pull the admin-managed taxonomy for the kinds this vertical uses, then
+     fall back to the bundled constants if the call fails. */
+  useEffect(() => {
+    const kinds = KIND_BY_VERTICAL[vertical] || [];
+    let cancelled = false;
+    Promise.all(
+      kinds.map((kind) =>
+        categoriesApi
+          .list({ kind })
+          .then((items) => [kind, items?.map((i) => i.name).filter(Boolean) || []])
+          .catch(() => [kind, FALLBACK[kind]]),
+      ),
+    ).then((results) => {
+      if (cancelled) return;
+      setLists((prev) => {
+        const next = { ...prev };
+        results.forEach(([kind, names]) => {
+          /* Empty response → keep the fallback so the sidebar isn't blank. */
+          if (names?.length) next[kind] = names;
+        });
+        return next;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [vertical]);
+
+  const groups = CONFIG_BY_VERTICAL(lists)[vertical] || [];
 
   const toggleMulti = (key, value) => {
     const current = filters[key] || [];

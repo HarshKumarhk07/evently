@@ -84,14 +84,24 @@ export const EVENT_CATEGORIES = [
   'Nightlife',
 ];
 
+/* Plays vertical now covers turf, sport and activity bookings. The genre
+   list represents the sport / activity types people can book. */
 export const PLAY_GENRES = [
-  'Drama',
-  'Comedy',
-  'Thriller',
-  'Classic',
-  'Mystery',
-  'Historical',
-  'Solo',
+  'Box Cricket',
+  'Turf Cricket',
+  'Indoor Cricket',
+  'Net Practice',
+  'Indoor Badminton',
+  'Outdoor Badminton',
+  'Lawn Tennis',
+  'Table Tennis',
+  'Volleyball Court',
+  'Swimming Pool',
+  'Water Park',
+  'Paintball',
+  'Go Karting',
+  'Laser Tag',
+  'Rock Climbing',
 ];
 
 export const SORT_OPTIONS = [

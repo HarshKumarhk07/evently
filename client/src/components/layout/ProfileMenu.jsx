@@ -59,7 +59,7 @@ export default function ProfileMenu() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 top-full z-50 mt-2 w-60 overflow-hidden rounded-2xl glass p-1.5"
+            className="absolute right-0 top-full z-50 mt-2 w-60 overflow-hidden rounded-2xl border border-white/[0.08] bg-ink-900 p-1.5 shadow-2xl shadow-black/60"
           >
             <div className="border-b border-white/[0.06] px-3 py-3">
               <p className="truncate text-sm font-semibold text-white">{user.name}</p>

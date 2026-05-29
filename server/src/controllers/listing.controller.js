@@ -5,6 +5,10 @@ import { ok, created, paginated } from '../utils/ApiResponse.js';
 import { buildQuery } from '../utils/queryFeatures.js';
 import Review from '../models/Review.js';
 
+function escapeRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /* Type-specific filters layered on top of the shared search/sort/pagination. */
 const filterStrategies = {
   Restaurant: (q, filter) => {
@@ -43,8 +47,19 @@ export function createListingController(Model, typeName) {
       searchFields: searchFieldsByType[typeName],
     });
 
-    if (req.query.cityId) filter.cityId = req.query.cityId;
-    else if (req.query.city) filter.city = req.query.city;
+    /* Match by ObjectId OR by name — listings created before cityId was
+       tracked only have the city string, so an OR keeps them visible when
+       the user picks that same city via the picker. */
+    if (req.query.cityId && req.query.city) {
+      filter.$or = [
+        { cityId: req.query.cityId },
+        { city: new RegExp(`^${escapeRegex(req.query.city)}$`, 'i') },
+      ];
+    } else if (req.query.cityId) {
+      filter.cityId = req.query.cityId;
+    } else if (req.query.city) {
+      filter.city = new RegExp(`^${escapeRegex(req.query.city)}$`, 'i');
+    }
     if (req.query.featured === 'true') filter.isFeatured = true;
     filter.isActive = true;
     filterStrategies[typeName]?.(req.query, filter);

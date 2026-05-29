@@ -9,7 +9,7 @@ import SearchModal from './SearchModal.jsx';
 import Button from '../ui/Button.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useScrolled } from '../../hooks/useScrolled.js';
-import { NAV_LINKS } from '../../lib/constants.js';
+import { useNavLinks } from '../../hooks/useNavLinks.js';
 import { cn } from '../../lib/cn.js';
 
 const navLinkClass = ({ isActive }) =>
@@ -24,6 +24,7 @@ export default function Navbar() {
   const scrolled = useScrolled(16);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const navLinks = useNavLinks();
 
   return (
     <>
@@ -47,7 +48,7 @@ export default function Navbar() {
 
           {/* Center — For You + the three verticals */}
           <div className="hidden items-center gap-1 md:flex">
-            {NAV_LINKS.map((v) => (
+            {navLinks.map((v) => (
               <NavLink key={v.key} to={v.path} end={v.end} className={navLinkClass}>
                 {({ isActive }) => (
                   <>
@@ -119,6 +120,7 @@ export default function Navbar() {
 /* Slide-in drawer for small screens. */
 function MobileMenu({ open, onClose }) {
   const { isAuthenticated, isManager } = useAuth();
+  const navLinks = useNavLinks();
 
   return (
     <AnimatePresence>
@@ -154,7 +156,7 @@ function MobileMenu({ open, onClose }) {
             </div>
 
             <div className="mt-6 flex flex-col gap-1" onClick={onClose}>
-              {NAV_LINKS.map((v) => (
+              {navLinks.map((v) => (
                 <NavLink
                   key={v.key}
                   to={v.path}

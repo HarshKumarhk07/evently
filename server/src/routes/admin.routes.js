@@ -20,6 +20,7 @@ router.post('/uploads', upload.single('image'), uploadImage);
 
 /* Manager approval queue */
 router.get('/managers', admin.listManagers);
+router.post('/managers', admin.adminCreateManager);
 router.get('/managers/:id', admin.getManager);
 router.post('/managers/:id/approve', admin.approveManager);
 router.post('/managers/:id/reject', validate(rejectManagerSchema), admin.rejectManager);
@@ -33,5 +34,17 @@ import * as city from '../controllers/city.controller.js';
 router.post('/cities', city.createCity);
 router.patch('/cities/:id', city.updateCity);
 router.delete('/cities/:id', city.deleteCity);
+
+// Admin: manage taxonomy (cuisines, event categories, genres, features)
+import { createCategory, updateCategory, deleteCategory } from '../controllers/category.controller.js';
+router.post('/categories', createCategory);
+router.patch('/categories/:id', updateCategory);
+router.delete('/categories/:id', deleteCategory);
+
+// Admin: manage navbar items
+import { createNavLink, updateNavLink, deleteNavLink } from '../controllers/navLink.controller.js';
+router.post('/nav-links', createNavLink);
+router.patch('/nav-links/:id', updateNavLink);
+router.delete('/nav-links/:id', deleteNavLink);
 
 export default router;

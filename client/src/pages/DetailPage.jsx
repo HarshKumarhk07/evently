@@ -247,23 +247,30 @@ export default function DetailPage({ vertical }) {
   return (
     <div className="pb-12">
       {/* Hero */}
-      <div className="relative h-[340px] overflow-hidden sm:h-[420px]">
-        <img
-          src={heroSrc}
-          alt={titleOf(item)}
-          className="h-full w-full object-cover"
-          onError={() => {
-            const fallback = makeArtImage({
-              theme: vertical,
-              title: titleOf(item),
-              subtitle: item.city,
-              seed: `${item.slug || item._id}-fallback`,
-              width: 1600,
-              height: 900,
-            });
-            if (heroSrc !== fallback) setHeroSrc(fallback);
-          }}
-        />
+      <div className="relative h-[340px] overflow-hidden bg-gradient-to-br from-ink-800 to-ink-900 sm:h-[420px]">
+        {heroSrc && (
+          <img
+            src={heroSrc}
+            alt=""
+            className="h-full w-full object-cover"
+            onError={(e) => {
+              const fallback = makeArtImage({
+                theme: vertical,
+                title: titleOf(item),
+                subtitle: item.city,
+                seed: `${item.slug || item._id}-fallback`,
+                width: 1600,
+                height: 900,
+              });
+              if (heroSrc !== fallback) {
+                setHeroSrc(fallback);
+              } else {
+                /* The fallback also failed — hide the broken-image icon. */
+                e.currentTarget.style.display = 'none';
+              }
+            }}
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/55 to-ink-950/20" />
         <div className="section absolute inset-x-0 bottom-0">
           <Link
@@ -282,7 +289,7 @@ export default function DetailPage({ vertical }) {
                 {item.isFeatured && <Badge tone="gold" icon={Star}>Featured</Badge>}
                 {vertical === 'events' && <Badge tone="brand">{item.category}</Badge>}
               </div>
-              <h1 className="font-display text-3xl font-extrabold text-white sm:text-4xl lg:text-5xl">
+              <h1 className="font-display text-2xl font-extrabold leading-tight text-white sm:text-4xl lg:text-5xl">
                 {titleOf(item)}
               </h1>
               <div className="mt-2.5 flex flex-wrap items-center gap-3 text-sm text-slate-300">

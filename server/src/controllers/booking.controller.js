@@ -131,7 +131,8 @@ export const confirmBooking = asyncHandler(async (req, res) => {
   if (booking.itemType !== 'Restaurant') {
     const Model = mongoose.model(booking.itemType);
     const item = await Model.findById(booking.item);
-    const pools = booking.itemType === 'Play' ? item.seatCategories : item.ticketTypes;
+    const poolKey = booking.itemType === 'Play' ? 'seatCategories' : 'ticketTypes';
+    const pools = item[poolKey];
     for (const t of booking.tickets) {
       const pool = pools.find((p) => p.name === t.category);
       if (pool) {
@@ -139,6 +140,9 @@ export const confirmBooking = asyncHandler(async (req, res) => {
         else pool.soldQuantity += t.quantity;
       }
     }
+    /* Without markModified, Mongoose may not detect numeric changes to
+       fields inside an array of subdocs and the increment is lost on save. */
+    item.markModified(poolKey);
     await item.save();
   }
 
@@ -193,7 +197,8 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     const Model = mongoose.model(booking.itemType);
     const item = await Model.findById(booking.item);
     if (item) {
-      const pools = booking.itemType === 'Play' ? item.seatCategories : item.ticketTypes;
+      const poolKey = booking.itemType === 'Play' ? 'seatCategories' : 'ticketTypes';
+      const pools = item[poolKey];
       for (const t of booking.tickets) {
         const pool = pools.find((p) => p.name === t.category);
         if (pool) {
@@ -201,6 +206,7 @@ export const cancelBooking = asyncHandler(async (req, res) => {
           else pool.soldQuantity = Math.max(0, pool.soldQuantity - t.quantity);
         }
       }
+      item.markModified(poolKey);
       await item.save();
     }
   }

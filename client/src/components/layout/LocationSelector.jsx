@@ -35,6 +35,8 @@ const ALLOWED_CITIES_LC = ALLOWED_CITIES.map((c) => c.toLowerCase());
 const isAllowedCity = (name) =>
   Boolean(name) && ALLOWED_CITIES_LC.includes(String(name).trim().toLowerCase());
 
+/* Returns the whole city object (not just the name) so callers can pass it
+   straight to setCity(). */
 function pickNearestCityFromList(list = [], lat, lng) {
   if (!list || !list.length) return null;
   let best = list[0];
@@ -55,7 +57,7 @@ function pickNearestCityFromList(list = [], lat, lng) {
       best = c;
     }
   }
-  return best?.cityName || null;
+  return best || null;
 }
 
 function findCityByName(list = [], rawName) {
@@ -71,6 +73,7 @@ export default function LocationSelector() {
   const [query, setQuery] = useState('');
   const [letter, setLetter] = useState('A');
   const [detecting, setDetecting] = useState(false);
+  const [outOfCoverage, setOutOfCoverage] = useState(null);
 
   /* Reset transient state when the modal closes. */
   useEffect(() => {
@@ -155,23 +158,38 @@ export default function LocationSelector() {
           const cityMatch = findCityByName(cities, reverseCity);
           const found = cityMatch || (await detectNearest(latitude, longitude));
           setDetecting(false);
+
+          /* User's actual location is one of the launch cities — just switch. */
           if (found && isAllowedCity(found.cityName)) {
             setCity(found);
             setOpen(false);
             toast.success(`Detected ${found.cityName}`);
             return;
           }
-          if (found) {
-            toast.error(`We're only live in ${ALLOWED_CITIES.join(' and ')} for now`);
-            return;
-          }
-          // fallback to client-side nearest, still gated to allowed cities
-          const f = pickNearestCityFromList(
+
+          /* User is outside Rohtak / Noida. Auto-pick the nearest allowed
+             city and show a clear explanation modal so they know why their
+             actual city isn't an option yet. */
+          const nearest = pickNearestCityFromList(
             cities.filter((c) => isAllowedCity(c.cityName)),
             latitude,
             longitude,
           );
-          if (f) select(f);
+          if (nearest) {
+            setCity(nearest);
+            setOpen(false);
+            setOutOfCoverage({
+              detected: reverseCity || found?.cityName || 'your area',
+              picked: nearest.cityName,
+            });
+            return;
+          }
+
+          /* No allowed city in the list — surface the launch-gate clearly. */
+          toast.error(
+            `We're only live in ${ALLOWED_CITIES.join(' and ')} for now — couldn't pick a default.`,
+          );
+          return;
         } catch (err) {
           setDetecting(false);
           toast.error('Could not detect your location');
@@ -402,6 +420,60 @@ export default function LocationSelector() {
         />
       </button>
       {panel}
+      <OutOfCoverageDialog
+        info={outOfCoverage}
+        onClose={() => setOutOfCoverage(null)}
+      />
     </>
+  );
+}
+
+/* Explains why we picked the nearest launch city instead of the user's
+   actual location — without this, users from outside Rohtak/Noida think
+   the picker is broken. Uses a portaled overlay so it works anywhere. */
+function OutOfCoverageDialog({ info, onClose }) {
+  return createPortal(
+    <AnimatePresence>
+      {info && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/65 backdrop-blur-sm px-4"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ scale: 0.96, y: 12 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.98, y: 8 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-3xl bg-white p-6 text-slate-900 shadow-2xl"
+          >
+            <div className="mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-brand-100 text-brand-600">
+              <MapPin className="h-5 w-5" />
+            </div>
+            <h3 className="text-xl font-semibold">
+              We're not live in {info.detected} yet
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+              Bookify is currently launching in{' '}
+              <strong>{ALLOWED_CITIES.join(' and ')}</strong> only. We've
+              switched your city to <strong>{info.picked}</strong> — the
+              closest one — so you can still browse what's available. New
+              cities are coming soon.
+            </p>
+            <div className="mt-5 flex justify-end">
+              <button
+                onClick={onClose}
+                className="rounded-xl bg-brand-gradient px-5 py-2 text-sm font-semibold text-white shadow-glow transition-transform hover:scale-[1.02]"
+              >
+                Got it
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>,
+    document.body,
   );
 }

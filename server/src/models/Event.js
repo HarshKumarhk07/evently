@@ -17,12 +17,9 @@ const eventSchema = new mongoose.Schema(
     title: { type: String, required: true, trim: true },
     slug: { type: String, unique: true, index: true },
     description: { type: String, default: '' },
-    category: {
-      type: String,
-      enum: ['Music', 'Comedy', 'Workshop', 'Sports', 'Festival', 'Tech', 'Art', 'Nightlife'],
-      default: 'Music',
-      index: true,
-    },
+    /* Free-form so admins can add new categories without a code change. */
+    category: { type: String, default: 'Music', index: true },
+    subcategory: { type: String, default: '', index: true },
     city: { type: String, required: true, index: true },
     cityId: { type: mongoose.Schema.Types.ObjectId, ref: 'City', index: true },
     locality: { type: String, default: '' },

@@ -12,6 +12,8 @@ import ConfirmDialog from '../../components/feedback/ConfirmDialog.jsx';
 import ImageUploader from '../../components/admin/ImageUploader.jsx';
 import GalleryUploader from '../../components/admin/GalleryUploader.jsx';
 import { listingApiFor, restaurantsApi, playsApi, eventsApi } from '../../api/listings.api.js';
+import { navLinksApi } from '../../api/navLinks.api.js';
+import { customListingsApi } from '../../api/customListings.api.js';
 import { VERTICAL_CONFIG, titleOf } from '../../lib/listings.js';
 import { EVENT_CATEGORIES } from '../../lib/constants.js';
 import { useLocation } from '../../context/LocationContext.jsx';
@@ -82,23 +84,69 @@ function buildPayload(vertical, form) {
 }
 
 export default function ManageListingsPage() {
-  const [vertical, setVertical] = useState('dining');
+  /* `tab` is the active tab value: 'dining' | 'plays' | 'events' for the
+     built-in verticals, or a NavLink `_id` for a custom category. */
+  const [tab, setTab] = useState('dining');
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null); // { mode, item }
   const [toDelete, setToDelete] = useState(null);
   const [counts, setCounts] = useState({ dining: 0, plays: 0, events: 0 });
+  const [customTabs, setCustomTabs] = useState([]);   // NavLinks with targetVertical
 
-  const api = listingApiFor(vertical);
+  /* Pull admin-managed navbar items so any custom categories (test,
+     Cricket Turfs, etc.) show up as extra tabs here too. We show ALL
+     non-built-in entries — including N/A ones — so the admin can see them
+     and decide if a target vertical is needed. */
+  const BUILTIN_PATHS = new Set(['/', '/dining', '/plays', '/events']);
+  useEffect(() => {
+    navLinksApi
+      .list()
+      .then((items) => {
+        const customs = (items || []).filter((n) => !BUILTIN_PATHS.has(n.path));
+        setCustomTabs(customs);
+      })
+      .catch(() => setCustomTabs([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* Look up the current tab's config — built-in vertical or a NavLink. */
+  const activeNav = customTabs.find((n) => n._id === tab);
+  /* An "independent" custom category is a NavLink without a targetVertical.
+     Its listings live in the standalone CustomListing collection so the
+     category functions exactly like Dining/Plays/Events do. */
+  const isIndependent = Boolean(activeNav) && !activeNav.targetVertical;
+  const vertical = activeNav ? activeNav.targetVertical : tab;
+  const api = isIndependent
+    ? customListingsApi
+    : vertical
+      ? listingApiFor(vertical)
+      : null;
 
   const load = useCallback(() => {
+    if (!api) {
+      setItems([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
+    const params = { limit: 50, sort: 'newest' };
+    if (isIndependent) {
+      /* Standalone category — query is scoped to this NavLink _id. */
+      params.category = activeNav._id;
+    } else if (activeNav?.filters) {
+      /* Filtered view of a built-in vertical (e.g. genre=Box Cricket). */
+      Object.entries(activeNav.filters).forEach(([key, value]) => {
+        if (Array.isArray(value) && value.length) params[key] = value.join(',');
+        else if (value && typeof value === 'string') params[key] = value;
+      });
+    }
     api
-      .list({ limit: 50, sort: 'newest' })
+      .list(params)
       .then((d) => setItems(d.items))
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
-  }, [api]);
+  }, [api, activeNav, isIndependent]);
 
   useEffect(load, [load]);
 
@@ -116,12 +164,17 @@ export default function ManageListingsPage() {
     { value: 'dining', label: `Restaurants · ${counts.dining}` },
     { value: 'plays', label: `Plays · ${counts.plays}` },
     { value: 'events', label: `Events · ${counts.events}` },
+    ...customTabs.map((n) => ({
+      value: n._id,
+      label: n.label,
+    })),
   ];
 
   const locationCtx = useLocation();
 
   const remove = async () => {
     try {
+      if (!api) throw new Error('No API for this tab');
       await api.remove(toDelete._id);
       setItems((prev) => prev.filter((i) => i._id !== toDelete._id));
       toast.success('Listing deleted');
@@ -147,12 +200,37 @@ export default function ManageListingsPage() {
       <Tabs
         className="mt-6"
         tabs={tabs}
-        value={vertical}
+        value={tab}
         onChange={(v) => {
-          setVertical(v);
+          setTab(v);
           setItems([]);
         }}
       />
+
+      {activeNav && activeNav.targetVertical && (
+        <p className="mt-2 text-xs text-slate-500">
+          Showing <strong className="text-slate-300">{activeNav.label}</strong>
+          {' '}
+          (a custom category powered by the{' '}
+          <strong className="text-slate-300">{vertical}</strong> vertical)
+          {activeNav.filters && Object.keys(activeNav.filters).length > 0 && (
+            <>
+              {' · filters '}
+              {Object.entries(activeNav.filters)
+                .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
+                .join(' · ')}
+            </>
+          )}
+        </p>
+      )}
+
+      {isIndependent && (
+        <p className="mt-2 text-xs text-slate-500">
+          <strong className="text-slate-300">{activeNav.label}</strong> is a
+          standalone category — its listings live in their own collection,
+          independent of Dining/Plays/Events.
+        </p>
+      )}
 
       <div className="mt-5 space-y-2">
         {loading ? (
@@ -183,14 +261,25 @@ export default function ManageListingsPage() {
                   {item.city} · ★ {item.rating?.toFixed(1) || '0.0'} · {item.reviewCount} reviews
                 </p>
               </div>
-              <Link
-                to={`${VERTICAL_CONFIG[vertical].basePath}/${item.slug}`}
-                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-white"
-                aria-label="View public page"
-                title="View public page"
-              >
-                <Eye className="h-4 w-4" />
-              </Link>
+              {isIndependent ? (
+                <Link
+                  to={activeNav.path}
+                  className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-white"
+                  aria-label="View public page"
+                  title="View public page"
+                >
+                  <Eye className="h-4 w-4" />
+                </Link>
+              ) : (
+                <Link
+                  to={`${VERTICAL_CONFIG[vertical].basePath}/${item.slug}`}
+                  className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-white"
+                  aria-label="View public page"
+                  title="View public page"
+                >
+                  <Eye className="h-4 w-4" />
+                </Link>
+              )}
               <button
                 onClick={() => setModal({ mode: 'edit', item })}
                 className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-white"
@@ -210,9 +299,28 @@ export default function ManageListingsPage() {
         )}
       </div>
 
-      {modal && (
+      {modal && !isIndependent && (
         <ListingFormModal
           vertical={vertical}
+          mode={modal.mode}
+          item={modal.item}
+          onClose={() => setModal(null)}
+          onSaved={(savedItem) => {
+            setModal(null);
+            if (savedItem?._id) {
+              setItems((prev) => {
+                const next = prev.filter((i) => i._id !== savedItem._id);
+                return [savedItem, ...next];
+              });
+            }
+          }}
+        />
+      )}
+
+      {modal && isIndependent && (
+        <CustomListingFormModal
+          categoryId={activeNav._id}
+          categoryLabel={activeNav.label}
           mode={modal.mode}
           item={modal.item}
           onClose={() => setModal(null)}
@@ -422,6 +530,195 @@ function ListingFormModal({ vertical, mode, item, onClose, onSaved }) {
               />
               Mark as featured
             </label>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-1">
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={saving}>
+            {mode === 'edit' ? 'Save changes' : 'Create listing'}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/* Form for fully-standalone categories (NavLinks without targetVertical).
+   Saves into the CustomListing collection. */
+function CustomListingFormModal({ categoryId, categoryLabel, mode, item, onClose, onSaved }) {
+  const locationCtx = useLocation();
+  const [form, setForm] = useState(() => ({
+    name: item?.name || '',
+    description: item?.description || '',
+    city:
+      item?.city ||
+      locationCtx.cities.find((c) => c._id === item?.cityId)?.cityName ||
+      '',
+    cityId: item?.cityId || '',
+    locality: item?.locality || '',
+    address: item?.address || '',
+    coverImage: item?.coverImage || '',
+    gallery: Array.isArray(item?.gallery) ? item.gallery : [],
+    price: item?.price ?? 0,
+    priceLabel: item?.priceLabel || 'per booking',
+    tags: (item?.tags || []).join(', '),
+    isFeatured: Boolean(item?.isFeatured),
+  }));
+  const [saving, setSaving] = useState(false);
+
+  const update = (key) => (e) =>
+    setForm((prev) => ({
+      ...prev,
+      [key]: e.target.type === 'checkbox' ? e.target.checked : e.target.value,
+    }));
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!form.name.trim()) return toast.error('Name is required');
+    if (!form.city.trim()) return toast.error('City is required');
+    setSaving(true);
+    try {
+      const payload = {
+        category: categoryId,
+        name: form.name.trim(),
+        description: form.description,
+        city: form.city,
+        cityId: form.cityId || undefined,
+        locality: form.locality,
+        address: form.address,
+        coverImage: form.coverImage || undefined,
+        gallery: form.gallery,
+        price: Number(form.price) || 0,
+        priceLabel: form.priceLabel,
+        tags: form.tags
+          ? form.tags.split(',').map((t) => t.trim()).filter(Boolean)
+          : [],
+        isFeatured: form.isFeatured,
+      };
+      const saved =
+        mode === 'edit'
+          ? await customListingsApi.update(item._id, payload)
+          : await customListingsApi.create(payload);
+      toast.success(mode === 'edit' ? 'Listing updated' : 'Listing created');
+      onSaved(saved);
+    } catch (err) {
+      toast.error(err.message || 'Could not save');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={`${mode === 'edit' ? 'Edit' : 'New'} listing in ${categoryLabel}`}
+      size="xl"
+    >
+      <form onSubmit={submit} className="space-y-5">
+        <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="space-y-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <p className="text-sm font-semibold text-white">Listing details</p>
+            <Input
+              label="Name"
+              placeholder="What is this listing called?"
+              value={form.name}
+              onChange={update('name')}
+            />
+            <Textarea
+              label="Description"
+              rows={4}
+              placeholder="A short, public-facing description."
+              value={form.description}
+              onChange={update('description')}
+            />
+            <Input
+              label="Tags (optional)"
+              placeholder="comma, separated, tags"
+              value={form.tags}
+              onChange={update('tags')}
+              hint="Used for search and filter chips."
+            />
+          </div>
+
+          <div className="space-y-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <p className="text-sm font-semibold text-white">Location & price</p>
+            <Select
+              label="City"
+              value={
+                locationCtx.cities.find(
+                  (c) =>
+                    c._id === (form.cityId || '') ||
+                    c.cityName?.toLowerCase() === (form.city || '').toLowerCase(),
+                )?.cityName || ''
+              }
+              onChange={(e) => {
+                const v = e.target.value;
+                const found = locationCtx.cities.find((c) => c.cityName === v);
+                setForm((prev) => ({
+                  ...prev,
+                  city: found ? found.cityName : '',
+                  cityId: found ? found._id : '',
+                }));
+              }}
+              options={[
+                { value: '', label: 'Choose a city' },
+                ...locationCtx.cities.map((c) => ({
+                  value: c.cityName,
+                  label: c.cityName,
+                })),
+              ]}
+            />
+            <Input
+              label="Locality / Area"
+              placeholder="Bandra West, MG Road, etc."
+              value={form.locality}
+              onChange={update('locality')}
+            />
+            <Input
+              label="Address (optional)"
+              value={form.address}
+              onChange={update('address')}
+            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input
+                label="Price (₹)"
+                type="number"
+                placeholder="0"
+                value={form.price}
+                onChange={update('price')}
+              />
+              <Input
+                label="Price label"
+                placeholder="per booking"
+                value={form.priceLabel}
+                onChange={update('priceLabel')}
+                hint='e.g. "per hour", "per person", "per ticket"'
+              />
+            </div>
+            <label className="flex items-center gap-2.5 rounded-xl border border-white/[0.06] bg-ink-900/40 px-3 py-2.5 text-sm text-slate-300">
+              <input
+                type="checkbox"
+                checked={form.isFeatured}
+                onChange={update('isFeatured')}
+                className="h-4 w-4 rounded border-ink-600 bg-ink-900 accent-brand-500"
+              />
+              Mark as featured
+            </label>
+            <ImageUploader
+              value={form.coverImage}
+              onChange={(url) => setForm((f) => ({ ...f, coverImage: url }))}
+              label="Cover image"
+              hint="Optional — leave empty to use a generated placeholder."
+            />
+            <GalleryUploader
+              value={form.gallery || []}
+              onChange={(next) => setForm((f) => ({ ...f, gallery: next }))}
+              label="Gallery images"
+            />
           </div>
         </div>
 

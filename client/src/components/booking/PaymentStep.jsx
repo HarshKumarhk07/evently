@@ -52,9 +52,15 @@ export default function PaymentStep({ booking, payment, onSuccess, onDismiss }) 
       order_id: payment.orderId,
       amount: Math.round(amount * 100),
       currency: payment.currency || 'INR',
-        name: 'Bookify',
+      name: 'Bookify',
       description: `Booking · ${booking.itemTitle}`,
-      theme: { color: '#7c3aed' },
+      /* Dark theme + brand backdrop so Razorpay matches the app instead of
+         opening on a white sheet. */
+      theme: {
+        color: '#7c3aed',
+        backdrop_color: 'rgba(12, 10, 20, 0.85)',
+        hide_topbar: false,
+      },
       prefill: {
         name: booking.contact?.name,
         email: booking.contact?.email,

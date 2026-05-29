@@ -6,11 +6,12 @@ import ProfileMenu from '../../components/layout/ProfileMenu.jsx';
 import SearchModal from '../../components/layout/SearchModal.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import Button from '../../components/ui/Button.jsx';
-import { NAV_LINKS } from '../../lib/constants.js';
+import { useNavLinks } from '../../hooks/useNavLinks.js';
 
 export default function MobileHeader() {
   const { isAuthenticated } = useAuth();
   const [searchOpen, setSearchOpen] = useState(false);
+  const navLinks = useNavLinks();
 
   return (
     <div className="md:hidden px-4 pt-4">
@@ -47,7 +48,7 @@ export default function MobileHeader() {
       <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
 
       <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
-        {NAV_LINKS.map((link) => (
+        {navLinks.map((link) => (
           <NavLink
             key={link.key}
             to={link.path}

@@ -12,6 +12,7 @@ export const adminApi = {
   /* Manager approval queue */
   managers: (params = {}) => api.get('/admin/managers', { params }).then((r) => r.data),
   getManager: (id) => api.get(`/admin/managers/${id}`).then((r) => r.data),
+  createManager: (payload) => api.post('/admin/managers', payload).then((r) => r.data),
   approveManager: (id) => api.post(`/admin/managers/${id}/approve`).then((r) => r.data),
   rejectManager: (id, reason) =>
     api.post(`/admin/managers/${id}/reject`, { reason }).then((r) => r.data),
