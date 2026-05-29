@@ -30,7 +30,33 @@ const KINDS_BY_VERTICAL = {
 };
 
 export default function ManageCategoriesPage() {
-  const [vertical, setVertical] = useState('dining');
+  const [tab, setTab] = useState('dining');
+  const [customNavLinks, setCustomNavLinks] = useState([]);
+
+  /* Pull custom standalone navlinks so they appear as taxonomy tabs too. */
+  const loadCustom = useCallback(() => {
+    navLinksApi
+      .list()
+      .then((items) => {
+        const customs = (items || []).filter(
+          (n) =>
+            n.path?.startsWith('/c/') && !n.targetVertical,
+        );
+        setCustomNavLinks(customs);
+      })
+      .catch(() => setCustomNavLinks([]));
+  }, []);
+
+  useEffect(loadCustom, [loadCustom]);
+
+  const tabs = [
+    ...VERTICAL_TABS,
+    ...customNavLinks.map((n) => ({ value: `nl:${n._id}`, label: n.label })),
+  ];
+
+  const activeCustom = tab.startsWith('nl:')
+    ? customNavLinks.find((n) => `nl:${n._id}` === tab)
+    : null;
 
   return (
     <div>
@@ -44,19 +70,29 @@ export default function ManageCategoriesPage() {
         </div>
       </div>
 
-      <NavbarLinksSection />
+      <NavbarLinksSection onChange={loadCustom} />
 
       <Tabs
         className="mt-8"
-        tabs={VERTICAL_TABS}
-        value={vertical}
-        onChange={setVertical}
+        tabs={tabs}
+        value={tab}
+        onChange={setTab}
       />
 
       <div className="mt-6 space-y-8">
-        {KINDS_BY_VERTICAL[vertical].map((group) => (
-          <KindSection key={group.kind} kind={group.kind} {...group} />
-        ))}
+        {activeCustom ? (
+          <KindSection
+            key={activeCustom._id}
+            kind="custom"
+            navLinkId={activeCustom._id}
+            label={`${activeCustom.label} sub-categories`}
+            addLabel={`Add to ${activeCustom.label}`}
+          />
+        ) : (
+          KINDS_BY_VERTICAL[tab]?.map((group) => (
+            <KindSection key={group.kind} kind={group.kind} {...group} />
+          ))
+        )}
       </div>
     </div>
   );
@@ -64,7 +100,7 @@ export default function ManageCategoriesPage() {
 
 /* ─────────────── Navbar item management ────────────────────────── */
 
-function NavbarLinksSection() {
+function NavbarLinksSection({ onChange }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);   // { mode, item }
@@ -86,6 +122,7 @@ function NavbarLinksSection() {
       await navLinksApi.remove(toDelete._id);
       setItems((prev) => prev.filter((i) => i._id !== toDelete._id));
       refreshNavLinks();
+      onChange?.();
       toast.success('Removed from navbar');
     } catch (err) {
       toast.error(err.message || 'Delete failed');
@@ -170,6 +207,7 @@ function NavbarLinksSection() {
             setModal(null);
             refreshNavLinks();
             load();
+            onChange?.();
           }}
         />
       )}
@@ -489,7 +527,7 @@ function NavLinkFormModal({ mode, item, onClose, onSaved }) {
 
 /* ─────────────── A single "kind" list inside a vertical ────────── */
 
-function KindSection({ kind, label, addLabel }) {
+function KindSection({ kind, navLinkId, label, addLabel }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);     // { mode, item, parent }
@@ -497,12 +535,14 @@ function KindSection({ kind, label, addLabel }) {
 
   const load = useCallback(() => {
     setLoading(true);
+    const query = { kind };
+    if (navLinkId) query.navLinkId = navLinkId;
     categoriesApi
-      .list({ kind })
+      .list(query)
       .then(setItems)
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
-  }, [kind]);
+  }, [kind, navLinkId]);
 
   useEffect(load, [load]);
 
@@ -596,6 +636,7 @@ function KindSection({ kind, label, addLabel }) {
           item={modal.item}
           parent={modal.parent}
           kind={kind}
+          navLinkId={navLinkId}
           onClose={() => setModal(null)}
           onSaved={() => {
             setModal(null);
@@ -656,7 +697,7 @@ function CategoryRow({ item, onEdit, onDelete, onAddSub }) {
   );
 }
 
-function CategoryFormModal({ mode, item, parent, kind, onClose, onSaved }) {
+function CategoryFormModal({ mode, item, parent, kind, navLinkId, onClose, onSaved }) {
   const [form, setForm] = useState(() => ({
     name: item?.name || '',
     displayOrder: item?.displayOrder ?? 0,
@@ -683,6 +724,7 @@ function CategoryFormModal({ mode, item, parent, kind, onClose, onSaved }) {
           ...form,
           kind,
           parentId: parent?._id || null,
+          navLinkId: navLinkId || null,
         });
       }
       toast.success(mode === 'edit' ? 'Updated' : 'Created');

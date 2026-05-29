@@ -4,14 +4,16 @@ import ApiError from '../utils/ApiError.js';
 import { ok, created } from '../utils/ApiResponse.js';
 
 const VERTICALS = ['dining', 'plays', 'events'];
-const KINDS = ['cuisine', 'category', 'genre', 'feature'];
+const KINDS = ['cuisine', 'category', 'genre', 'feature', 'custom'];
 
-/* The kind → vertical mapping so we can derive vertical from kind. */
+/* The kind → vertical mapping so we can derive vertical from kind.
+   `custom` entries are scoped to a NavLink instead of a vertical. */
 const KIND_TO_VERTICAL = {
   cuisine: 'dining',
   feature: 'dining',
   genre: 'plays',
   category: 'events',
+  custom: null,
 };
 
 /* Seed values used on first visit so admins see something to start from.
@@ -74,6 +76,10 @@ export const listCategories = asyncHandler(async (req, res) => {
   if (req.query.parentId !== undefined) {
     filter.parentId = req.query.parentId === 'null' ? null : req.query.parentId;
   }
+  if (req.query.navLinkId !== undefined) {
+    filter.navLinkId =
+      req.query.navLinkId === 'null' ? null : req.query.navLinkId;
+  }
   const items = await Category.find(filter)
     .sort({ displayOrder: 1, name: 1 })
     .lean();
@@ -82,9 +88,12 @@ export const listCategories = asyncHandler(async (req, res) => {
 
 /* POST /api/admin/categories — admin creates a new entry or sub-entry. */
 export const createCategory = asyncHandler(async (req, res) => {
-  const { name, kind, parentId = null, displayOrder = 0 } = req.body;
+  const { name, kind, parentId = null, navLinkId = null, displayOrder = 0 } = req.body;
   if (!name?.trim()) throw ApiError.badRequest('Name is required');
   if (!KINDS.includes(kind)) throw ApiError.badRequest('Invalid kind');
+  if (kind === 'custom' && !navLinkId) {
+    throw ApiError.badRequest('navLinkId is required for custom categories');
+  }
 
   let resolvedParent = null;
   if (parentId) {
@@ -98,8 +107,9 @@ export const createCategory = asyncHandler(async (req, res) => {
   const c = await Category.create({
     name: name.trim(),
     kind,
-    vertical: KIND_TO_VERTICAL[kind],
+    vertical: KIND_TO_VERTICAL[kind] || '',
     parentId: resolvedParent?._id || null,
+    navLinkId: navLinkId || null,
     displayOrder,
   });
   return created(res, c, 'Category created');
