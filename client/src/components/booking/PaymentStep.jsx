@@ -16,7 +16,7 @@ import { loadRazorpay } from '../../lib/razorpay.js';
  * `onSuccess` receives the verification payload the server needs to confirm:
  * `{ razorpayPaymentId, razorpayOrderId, razorpaySignature }`.
  */
-export default function PaymentStep({ booking, payment, onSuccess }) {
+export default function PaymentStep({ booking, payment, onSuccess, onDismiss }) {
   const amount = booking.amount;
   const isMock = payment.provider === 'mock';
   const [processing, setProcessing] = useState(false);
@@ -67,12 +67,20 @@ export default function PaymentStep({ booking, payment, onSuccess }) {
           razorpaySignature: res.razorpay_signature,
         });
       },
-      modal: { ondismiss: () => setProcessing(false) },
+      modal: {
+        ondismiss: () => {
+          setProcessing(false);
+          /* User closed the Razorpay window without paying → cancel the
+             pending booking so it doesn't show up as "pending" forever. */
+          onDismiss?.('cancelled');
+        },
+      },
     });
 
     rzp.on('payment.failed', (resp) => {
       toast.error(resp.error?.description || 'Payment failed — please try again');
       setProcessing(false);
+      onDismiss?.('failed');
     });
     rzp.open();
   };

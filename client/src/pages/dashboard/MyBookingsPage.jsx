@@ -9,14 +9,14 @@ import { useFetch } from '../../hooks/useFetch.js';
 import { bookingsApi } from '../../api/bookings.api.js';
 
 const TABS = [
+  { value: 'all', label: 'All' },
   { value: 'upcoming', label: 'Upcoming' },
   { value: 'past', label: 'Past' },
   { value: 'cancelled', label: 'Cancelled' },
-  { value: 'all', label: 'All' },
 ];
 
 export default function MyBookingsPage() {
-  const [tab, setTab] = useState('upcoming');
+  const [tab, setTab] = useState('all');
   const { data, loading, setData } = useFetch(() => bookingsApi.mine({ limit: 50 }), []);
   const bookings = data?.items || [];
 

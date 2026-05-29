@@ -13,9 +13,9 @@ const CONFIG = {
   dining: [
     { key: 'cuisine', label: 'Cuisine', kind: 'multi', options: CUISINES },
     {
-      key: 'priceRange',
+      key: 'priceBucket',
       label: 'Price Range',
-      kind: 'multi',
+      kind: 'single',
       options: PRICE_RANGES.map((p) => ({ value: p.value, label: p.label })),
     },
     { key: 'feature', label: 'Features', kind: 'multi', options: RESTAURANT_FEATURES },
@@ -80,6 +80,24 @@ export default function FilterSidebar({ vertical, filters, onChange, onReset }) 
           <p className="mb-2.5 text-sm font-medium text-slate-300">{group.label}</p>
           <div className="flex flex-wrap gap-2">
             {normalize(group.options).map((opt) => {
+              if (group.kind === 'single') {
+                const active = filters[group.key] === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() =>
+                      onChange({
+                        ...filters,
+                        [group.key]: active ? '' : opt.value,
+                      })
+                    }
+                    className={cn('chip', active && 'chip-active')}
+                    aria-pressed={active}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              }
               const active = (filters[group.key] || []).includes(opt.value);
               return (
                 <button

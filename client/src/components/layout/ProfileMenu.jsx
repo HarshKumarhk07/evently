@@ -7,6 +7,7 @@ import {
 import toast from 'react-hot-toast';
 import Avatar from '../ui/Avatar.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useFavorites } from '../../hooks/useFavorites.js';
 import { useOnClickOutside } from '../../hooks/useOnClickOutside.js';
 
 const items = [
@@ -19,6 +20,7 @@ const items = [
 /* Avatar dropdown with account navigation and logout. */
 export default function ProfileMenu() {
   const { user, isAdmin, isManager, logout } = useAuth();
+  const { count: favCount } = useFavorites();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const navigate = useNavigate();
@@ -73,7 +75,12 @@ export default function ProfileMenu() {
                   className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-white/[0.05] hover:text-white"
                 >
                   <item.icon className="h-4 w-4 text-slate-500" />
-                  {item.label}
+                  <span className="flex-1">{item.label}</span>
+                  {item.label === 'Favorites' && favCount > 0 && (
+                    <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-semibold text-red-300">
+                      {favCount}
+                    </span>
+                  )}
                 </Link>
               ))}
               {isManager && (

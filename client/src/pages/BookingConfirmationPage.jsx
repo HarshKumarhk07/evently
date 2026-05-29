@@ -9,6 +9,89 @@ import EmptyState from '../components/ui/EmptyState.jsx';
 import { bookingsApi } from '../api/bookings.api.js';
 import { formatCurrency, formatDateTime, formatDate } from '../lib/format.js';
 
+/* Render the ticket onto a canvas and download it as a JPG. */
+function downloadTicket(booking) {
+  const W = 900;
+  const H = 1200;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  /* Background — gradient deep purple → pink to match the brand. */
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#1a1430');
+  bg.addColorStop(1, '#2b1746');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  /* Header band. */
+  const header = ctx.createLinearGradient(0, 0, W, 0);
+  header.addColorStop(0, '#7c3aed');
+  header.addColorStop(1, '#ec4899');
+  ctx.fillStyle = header;
+  ctx.fillRect(0, 0, W, 180);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 64px sans-serif';
+  ctx.fillText('Bookify', 60, 110);
+  ctx.font = '28px sans-serif';
+  ctx.fillText('Booking confirmation', 60, 150);
+
+  /* Card body. */
+  let y = 260;
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 44px sans-serif';
+  ctx.fillText(booking.itemTitle, 60, y);
+  y += 50;
+  ctx.fillStyle = '#9ca3af';
+  ctx.font = '24px sans-serif';
+  ctx.fillText(`${booking.itemType} · Ref ${booking.reference || booking._id}`, 60, y);
+
+  const rows = [
+    booking.reservation?.date && ['Date', booking.reservation.date],
+    booking.reservation?.time && ['Time', booking.reservation.time],
+    booking.reservation?.guests && ['Guests', String(booking.reservation.guests)],
+    booking.showtime && ['Showtime', new Date(booking.showtime).toLocaleString()],
+    ['Amount', booking.amount > 0 ? `Rs. ${booking.amount}` : 'Free'],
+    ['Status', booking.status],
+    ['Booked on', new Date(booking.createdAt).toLocaleString()],
+  ].filter(Boolean);
+
+  y += 80;
+  rows.forEach(([label, value]) => {
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '26px sans-serif';
+    ctx.fillText(label, 60, y);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.fillText(value, 380, y);
+    y += 60;
+  });
+
+  /* Footer. */
+  ctx.fillStyle = '#6b7280';
+  ctx.font = '22px sans-serif';
+  ctx.fillText('Show this ticket at the venue.', 60, H - 80);
+  ctx.fillStyle = '#7c3aed';
+  ctx.font = 'bold 26px sans-serif';
+  ctx.fillText('bookify.app', W - 230, H - 80);
+
+  canvas.toBlob(
+    (blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bookify-${booking.reference || booking._id}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    },
+    'image/jpeg',
+    0.92,
+  );
+}
+
 function Row({ label, value }) {
   return (
     <div className="flex justify-between gap-4 py-2 text-sm">
@@ -128,7 +211,7 @@ export default function BookingConfirmationPage() {
             variant="secondary"
             fullWidth
             icon={Download}
-            onClick={() => window.print()}
+            onClick={() => downloadTicket(booking)}
           >
             Save ticket
           </Button>

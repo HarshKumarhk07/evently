@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { Search } from 'lucide-react';
 import SearchModal from '../layout/SearchModal.jsx';
 
-const POPULAR = ['Rooftop bars', 'Comedy', 'Live music', 'Theatre'];
-
 /* Prominent hero search trigger that opens the global search palette. */
 export default function HeroSearch() {
   const [open, setOpen] = useState(false);
@@ -23,18 +21,6 @@ export default function HeroSearch() {
             ⌘ K
           </kbd>
         </button>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-slate-500">Popular:</span>
-          {POPULAR.map((p) => (
-            <button
-              key={p}
-              onClick={() => setOpen(true)}
-              className="text-xs text-slate-400 underline-offset-2 transition-colors hover:text-brand-300 hover:underline"
-            >
-              {p}
-            </button>
-          ))}
-        </div>
       </div>
       <SearchModal open={open} onClose={() => setOpen(false)} />
     </>

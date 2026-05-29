@@ -100,11 +100,14 @@ export const SORT_OPTIONS = [
   { value: 'popular', label: 'Most Reviewed' },
 ];
 
+/* Price buckets used by the dining filter. min/max are inclusive (₹).
+   `max: null` means "no upper bound" (used for the open-ended top bucket). */
 export const PRICE_RANGES = [
-  { value: 1, label: '₹ Budget' },
-  { value: 2, label: '₹₹ Casual' },
-  { value: 3, label: '₹₹₹ Premium' },
-  { value: 4, label: '₹₹₹₹ Luxe' },
+  { value: 'u1000', label: 'Under ₹1000', min: 0, max: 1000 },
+  { value: '1000-2000', label: '₹1000 – ₹2000', min: 1000, max: 2000 },
+  { value: '2000-3000', label: '₹2000 – ₹3000', min: 2000, max: 3000 },
+  { value: '3000-5000', label: '₹3000 – ₹5000', min: 3000, max: 5000 },
+  { value: 'a5000', label: 'Above ₹5000', min: 5000, max: null },
 ];
 
 /* Drives the three listing verticals and their routes/theming. */

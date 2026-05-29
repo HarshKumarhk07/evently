@@ -102,11 +102,6 @@ export default function ListingCard({ vertical: verticalProp, item, index = 0 })
 
           <div className="absolute bottom-3 left-3 flex items-center gap-2">
             {item.rating > 0 && <RatingPill value={item.rating} count={item.reviewCount} />}
-            {vertical === 'dining' && (
-              <span className="rounded-lg bg-black/55 px-2 py-0.5 text-xs font-semibold text-white backdrop-blur">
-                {priceRangeLabel(item.priceRange)}
-              </span>
-            )}
           </div>
         </div>
 

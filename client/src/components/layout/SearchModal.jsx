@@ -1,12 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, UtensilsCrossed, Drama, Ticket, TrendingUp } from 'lucide-react';
+import { Search, UtensilsCrossed, Drama, Ticket } from 'lucide-react';
 import Modal from '../ui/Modal.jsx';
 import { Spinner } from '../ui/Spinner.jsx';
 import { useDebounce } from '../../hooks/useDebounce.js';
 import { restaurantsApi, playsApi, eventsApi } from '../../api/listings.api.js';
-
-const SUGGESTIONS = ['Rooftop dining', 'Comedy nights', 'Live music', 'Date night', 'Workshops'];
 
 const groups = [
   { key: 'dining', label: 'Dining', icon: UtensilsCrossed, api: restaurantsApi, path: '/dining', titleKey: 'name' },
@@ -75,22 +73,9 @@ export default function SearchModal({ open, onClose }) {
 
       <div className="mt-4 max-h-[55vh] overflow-y-auto">
         {!query.trim() && (
-          <div>
-            <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              <TrendingUp className="h-3.5 w-3.5" /> Trending searches
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {SUGGESTIONS.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setQuery(s)}
-                  className="chip hover:border-brand-500/50 hover:text-brand-200"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
+          <p className="py-6 text-center text-sm text-slate-500">
+            Start typing to search restaurants, plays and events.
+          </p>
         )}
 
         {query.trim() && !loading && !hasResults && (

@@ -82,6 +82,24 @@ export default function BookingModal({ open, onClose, draft }) {
     }
   };
 
+  /* Called when the user closes the Razorpay window without paying or
+     when the payment fails — flip the pending booking to cancelled so the
+     manager/admin tables don't show it stuck on "pending" forever. */
+  const handleDismiss = async (reason) => {
+    if (!created?.booking?._id) return;
+    try {
+      await bookingsApi.cancel(created.booking._id);
+    } catch (err) {
+      /* Best-effort — even if cancel fails the user has already left the flow. */
+    }
+    toast.error(
+      reason === 'failed'
+        ? 'Payment failed — booking cancelled'
+        : 'Payment cancelled',
+    );
+    onClose();
+  };
+
   return (
     <Modal
       open={open}
@@ -159,7 +177,12 @@ export default function BookingModal({ open, onClose, draft }) {
       )}
 
       {step === 'payment' && created?.payment && (
-        <PaymentStep booking={created.booking} payment={created.payment} onSuccess={handlePaid} />
+        <PaymentStep
+          booking={created.booking}
+          payment={created.payment}
+          onSuccess={handlePaid}
+          onDismiss={handleDismiss}
+        />
       )}
     </Modal>
   );

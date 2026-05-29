@@ -23,33 +23,47 @@ function StatCard({ icon: Icon, label, value, accent }) {
   );
 }
 
-/* Lightweight CSS bar chart for the 7-day booking trend. */
+/* Lightweight CSS bar chart for the 7-day booking trend. Pads missing days
+   with zero-bars so the x-axis is always a full week. */
 function TrendChart({ trend }) {
-  const max = Math.max(1, ...trend.map((d) => d.count));
+  /* Build a complete 7-day window so the chart is never empty-looking. */
+  const days = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const key = d.toISOString().slice(0, 10);
+    const found = trend.find((t) => t._id === key);
+    return { key, label: d.toLocaleDateString('en-IN', { weekday: 'short' }), count: found?.count || 0 };
+  });
+  const max = Math.max(1, ...days.map((d) => d.count));
+  const total = days.reduce((s, d) => s + d.count, 0);
+
   return (
-    <div className="flex h-44 items-end gap-2">
-      {trend.length === 0 && (
-        <p className="m-auto text-sm text-slate-500">No activity in the last 7 days</p>
+    <div>
+      <div className="flex h-44 items-end gap-2">
+        {days.map((d) => {
+          const pct = Math.max(2, (d.count / max) * 100); // min 2% so empty bars still show as a sliver
+          return (
+            <div key={d.key} className="group flex flex-1 flex-col items-stretch">
+              <div className="relative flex w-full flex-1 items-end">
+                <div
+                  className="w-full rounded-t-lg bg-brand-gradient transition-[height] duration-500"
+                  style={{ height: `${pct}%`, opacity: d.count === 0 ? 0.25 : 1 }}
+                >
+                  <span className="absolute -top-6 left-1/2 -translate-x-1/2 rounded bg-ink-700 px-1.5 py-0.5 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100">
+                    {d.count}
+                  </span>
+                </div>
+              </div>
+              <span className="mt-2 text-center text-[10px] text-slate-500">{d.label}</span>
+            </div>
+          );
+        })}
+      </div>
+      {total === 0 && (
+        <p className="mt-3 text-center text-xs text-slate-500">
+          No bookings yet in the last 7 days.
+        </p>
       )}
-      {trend.map((d) => (
-        <div key={d._id} className="group flex flex-1 flex-col items-center gap-2">
-          <div className="relative flex w-full flex-1 items-end">
-            <motion.div
-              initial={{ height: 0 }}
-              animate={{ height: `${(d.count / max) * 100}%` }}
-              transition={{ duration: 0.6, ease: 'easeOut' }}
-              className="w-full rounded-t-lg bg-brand-gradient"
-            >
-              <span className="absolute -top-6 left-1/2 -translate-x-1/2 rounded bg-ink-700 px-1.5 py-0.5 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100">
-                {d.count}
-              </span>
-            </motion.div>
-          </div>
-          <span className="text-[10px] text-slate-500">
-            {new Date(d._id).toLocaleDateString('en-IN', { weekday: 'short' })}
-          </span>
-        </div>
-      ))}
     </div>
   );
 }

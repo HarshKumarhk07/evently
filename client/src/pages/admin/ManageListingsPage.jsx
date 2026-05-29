@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, Star } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Plus, Pencil, Trash2, Star, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Tabs from '../../components/ui/Tabs.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -9,17 +10,12 @@ import { Skeleton } from '../../components/ui/Skeleton.jsx';
 import Badge from '../../components/ui/Badge.jsx';
 import ConfirmDialog from '../../components/feedback/ConfirmDialog.jsx';
 import ImageUploader from '../../components/admin/ImageUploader.jsx';
-import { listingApiFor } from '../../api/listings.api.js';
+import GalleryUploader from '../../components/admin/GalleryUploader.jsx';
+import { listingApiFor, restaurantsApi, playsApi, eventsApi } from '../../api/listings.api.js';
 import { VERTICAL_CONFIG, titleOf } from '../../lib/listings.js';
 import { EVENT_CATEGORIES } from '../../lib/constants.js';
 import { useLocation } from '../../context/LocationContext.jsx';
 import { makeArtImage } from '../../lib/visuals.js';
-
-const TABS = [
-  { value: 'dining', label: 'Restaurants' },
-  { value: 'plays', label: 'Plays' },
-  { value: 'events', label: 'Events' },
-];
 
 const blankForm = {
   name: '',
@@ -28,6 +24,7 @@ const blankForm = {
   cityId: '',
   locality: '',
   coverImage: '',
+  gallery: [],
   isFeatured: false,
   cuisine: '',
   costForTwo: 1500,
@@ -56,6 +53,7 @@ function buildPayload(vertical, form) {
         width: 1200,
         height: 800,
       }),
+    gallery: Array.isArray(form.gallery) ? form.gallery.filter(Boolean) : [],
     isFeatured: form.isFeatured,
   };
   if (form.lat && form.lng) {
@@ -89,6 +87,7 @@ export default function ManageListingsPage() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null); // { mode, item }
   const [toDelete, setToDelete] = useState(null);
+  const [counts, setCounts] = useState({ dining: 0, plays: 0, events: 0 });
 
   const api = listingApiFor(vertical);
 
@@ -102,6 +101,22 @@ export default function ManageListingsPage() {
   }, [api]);
 
   useEffect(load, [load]);
+
+  /* Load tab counts so the user can see how many listings exist per vertical
+     without having to click each tab. */
+  useEffect(() => {
+    Promise.all([
+      restaurantsApi.list({ limit: 1 }).then((d) => d.pagination?.total || 0).catch(() => 0),
+      playsApi.list({ limit: 1 }).then((d) => d.pagination?.total || 0).catch(() => 0),
+      eventsApi.list({ limit: 1 }).then((d) => d.pagination?.total || 0).catch(() => 0),
+    ]).then(([dining, plays, events]) => setCounts({ dining, plays, events }));
+  }, [items.length]);
+
+  const tabs = [
+    { value: 'dining', label: `Restaurants · ${counts.dining}` },
+    { value: 'plays', label: `Plays · ${counts.plays}` },
+    { value: 'events', label: `Events · ${counts.events}` },
+  ];
 
   const locationCtx = useLocation();
 
@@ -131,7 +146,7 @@ export default function ManageListingsPage() {
 
       <Tabs
         className="mt-6"
-        tabs={TABS}
+        tabs={tabs}
         value={vertical}
         onChange={(v) => {
           setVertical(v);
@@ -168,6 +183,14 @@ export default function ManageListingsPage() {
                   {item.city} · ★ {item.rating?.toFixed(1) || '0.0'} · {item.reviewCount} reviews
                 </p>
               </div>
+              <Link
+                to={`${VERTICAL_CONFIG[vertical].basePath}/${item.slug}`}
+                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-white"
+                aria-label="View public page"
+                title="View public page"
+              >
+                <Eye className="h-4 w-4" />
+              </Link>
               <button
                 onClick={() => setModal({ mode: 'edit', item })}
                 className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-white"
@@ -233,6 +256,7 @@ function ListingFormModal({ vertical, mode, item, onClose, onSaved }) {
       cityId: item.cityId || '',
       locality: item.locality || '',
       coverImage: item.coverImage || '',
+      gallery: Array.isArray(item.gallery) ? item.gallery : [],
       isFeatured: item.isFeatured || false,
       cuisine: (item.cuisine || []).join(', '),
       costForTwo: item.costForTwo || 1500,
@@ -373,6 +397,12 @@ function ListingFormModal({ vertical, mode, item, onClose, onSaved }) {
               value={form.coverImage}
               onChange={(url) => setForm((f) => ({ ...f, coverImage: url }))}
               hint="Uploads to Cloudinary · leave empty for auto-generated artwork"
+            />
+            <GalleryUploader
+              value={form.gallery || []}
+              onChange={(next) => setForm((f) => ({ ...f, gallery: next }))}
+              label="Gallery images"
+              hint="Show off the venue/event with extra photos."
             />
 
             <div className="grid gap-3 sm:grid-cols-3">

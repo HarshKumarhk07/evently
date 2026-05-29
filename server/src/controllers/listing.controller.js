@@ -9,7 +9,12 @@ import Review from '../models/Review.js';
 const filterStrategies = {
   Restaurant: (q, filter) => {
     if (q.cuisine) filter.cuisine = { $in: q.cuisine.split(',') };
-    if (q.priceRange) filter.priceRange = { $in: q.priceRange.split(',').map(Number) };
+    /* costForTwo bucket range — costMin / costMax are inclusive rupee bounds. */
+    if (q.costMin || q.costMax) {
+      filter.costForTwo = {};
+      if (q.costMin) filter.costForTwo.$gte = Number(q.costMin);
+      if (q.costMax) filter.costForTwo.$lte = Number(q.costMax);
+    }
     if (q.minRating) filter.rating = { $gte: Number(q.minRating) };
     if (q.feature) filter.features = { $in: q.feature.split(',') };
   },

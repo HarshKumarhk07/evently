@@ -21,12 +21,12 @@ export default function HomePage() {
   const [recentlyViewed, setRecentlyViewed] = useState([]);
 
   useEffect(() => {
-    const cityParam = {};
-    if (location?.city?._id) cityParam.cityId = location.city._id;
+    /* Home page shows hand-picked listings across every city — the
+       per-vertical pages (/dining /plays /events) keep their city filter. */
     Promise.all([
-      restaurantsApi.list({ sort: 'rating', limit: 10, ...cityParam }).then((d) => d.items),
-      playsApi.list({ sort: 'rating', limit: 10, ...cityParam }).then((d) => d.items),
-      eventsApi.list({ sort: 'newest', limit: 10, ...cityParam }).then((d) => d.items),
+      restaurantsApi.list({ sort: 'rating', limit: 10 }).then((d) => d.items),
+      playsApi.list({ sort: 'rating', limit: 10 }).then((d) => d.items),
+      eventsApi.list({ sort: 'newest', limit: 10 }).then((d) => d.items),
     ])
       .then(([dining, plays, events]) => setData({ dining, plays, events }))
       .catch(() => setData({ dining: [], plays: [], events: [] }))

@@ -15,6 +15,7 @@ import { Skeleton, CardSkeleton } from '../../components/ui/Skeleton.jsx';
 import EmptyState from '../../components/ui/EmptyState.jsx';
 import ConfirmDialog from '../../components/feedback/ConfirmDialog.jsx';
 import ImageUploader from '../../components/admin/ImageUploader.jsx';
+import GalleryUploader from '../../components/admin/GalleryUploader.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useLocation } from '../../context/LocationContext.jsx';
 import { managerApi } from '../../api/manager.api.js';
@@ -523,8 +524,6 @@ function ListingRow({ item, onEdit, onDelete }) {
         </button>
         <Link
           to={`${cfg.basePath}/${item.slug}`}
-          target="_blank"
-          rel="noopener noreferrer"
           className="hidden rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-white sm:block"
           aria-label="View public page"
           title="View public page"
@@ -586,6 +585,7 @@ function buildPayload(vertical, form) {
     locality: form.locality,
     description: form.description,
     coverImage: form.coverImage || undefined,
+    gallery: Array.isArray(form.gallery) ? form.gallery.filter(Boolean) : [],
     isFeatured: form.isFeatured,
   };
 
@@ -649,6 +649,7 @@ function getInitialForm(item, defaultCity) {
       cityId: '',
       locality: '',
       coverImage: '',
+      gallery: [],
       isFeatured: false,
       cuisine: '',
       costForTwo: 1500,
@@ -669,6 +670,7 @@ function getInitialForm(item, defaultCity) {
     cityId: item.cityId || '',
     locality: item.locality || '',
     coverImage: item.coverImage || '',
+    gallery: Array.isArray(item.gallery) ? item.gallery : [],
     isFeatured: Boolean(item.isFeatured),
     cuisine: (item.cuisine || []).join(', '),
     costForTwo: item.costForTwo || 1500,
@@ -715,8 +717,29 @@ function CreateListingModal({ open, onClose, defaultVertical, defaultCity, item,
     try {
       const api = listingApiFor(vertical);
       const payload = buildPayload(vertical, form);
-      const saved = isEdit ? await api.update(item._id, payload) : await api.create(payload);
-      toast.success(isEdit ? 'Listing updated' : 'Listing created');
+      const originalVertical = item?._vertical || defaultVertical;
+      const verticalChanged = isEdit && vertical !== originalVertical;
+
+      let saved;
+      if (verticalChanged) {
+        /* Each vertical lives in its own collection, so a type change is a
+           delete-from-old + create-in-new swap. Create first so we don't
+           orphan the data if the create fails. */
+        saved = await api.create(payload);
+        try {
+          await listingApiFor(originalVertical).remove(item._id);
+        } catch (err) {
+          /* If the cleanup fails the user has two copies — surface it. */
+          toast.error('New listing saved but the old one could not be removed');
+        }
+        toast.success('Listing moved to the new type');
+      } else if (isEdit) {
+        saved = await api.update(item._id, payload);
+        toast.success('Listing updated');
+      } else {
+        saved = await api.create(payload);
+        toast.success('Listing created');
+      }
       onCreated(saved);
     } catch (err) {
       toast.error(err?.message || 'Could not save');
@@ -732,23 +755,43 @@ function CreateListingModal({ open, onClose, defaultVertical, defaultCity, item,
           <p className="text-sm font-semibold text-white">Listing type</p>
           <p className="mt-1 text-xs text-slate-500">Choose what you want to publish and fill in the public-facing details.</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <Select
-              label="Type"
-              value={vertical}
-              onChange={(e) => setVertical(e.target.value)}
-              options={VERTICAL_OPTIONS}
-            />
+            <div>
+              <Select
+                label="Type"
+                value={vertical}
+                onChange={(e) => setVertical(e.target.value)}
+                options={VERTICAL_OPTIONS}
+              />
+              {isEdit && vertical !== (item._vertical || defaultVertical) && (
+                <p className="mt-1.5 text-xs text-amber-300">
+                  Changing the type will re-create this listing under the new
+                  type. The old version will be deleted.
+                </p>
+              )}
+            </div>
             <Select
               label="City"
-              value={form.cityId || form.city || ''}
+              /* Use cityName as the canonical value so the saved city
+                 always shows up, even when only the string was persisted. */
+              value={
+                locationCtx.cities.find(
+                  (c) =>
+                    c._id === (form.cityId || '') ||
+                    c.cityName?.toLowerCase() === (form.city || '').toLowerCase(),
+                )?.cityName || ''
+              }
               onChange={(e) => {
                 const v = e.target.value;
-                const found = locationCtx.cities.find((c) => c._id === v || c.cityName === v);
-                setForm((prev) => ({ ...prev, city: found ? found.cityName : v, cityId: found ? found._id : '' }));
+                const found = locationCtx.cities.find((c) => c.cityName === v);
+                setForm((prev) => ({
+                  ...prev,
+                  city: found ? found.cityName : '',
+                  cityId: found ? found._id : '',
+                }));
               }}
               options={[
                 { value: '', label: 'Choose a city' },
-                ...locationCtx.cities.map((c) => ({ value: c._id, label: c.cityName })),
+                ...locationCtx.cities.map((c) => ({ value: c.cityName, label: c.cityName })),
               ]}
             />
           </div>
@@ -841,6 +884,12 @@ function CreateListingModal({ open, onClose, defaultVertical, defaultCity, item,
               onChange={(url) => setForm((f) => ({ ...f, coverImage: url }))}
               label="Cover image"
               hint="Optional — if left empty, the system will generate a clean placeholder."
+            />
+            <GalleryUploader
+              value={form.gallery || []}
+              onChange={(next) => setForm((f) => ({ ...f, gallery: next }))}
+              label="Gallery images"
+              hint="Up to 5MB per image. Helps people decide whether to book."
             />
           </div>
         </div>

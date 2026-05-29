@@ -257,10 +257,23 @@ export default function ManagerProfilePage() {
               <Input label="Email" value={profile.email} disabled />
             </div>
             <div className="grid gap-4 md:grid-cols-2">
-              <Input label="Business name" value={form.businessName} disabled />
-              <Input label="Business type" value={form.businessType} disabled />
+              <Input
+                label="Business name"
+                value={form.businessName}
+                onChange={update('businessName')}
+              />
+              <Input
+                label="Business type"
+                value={form.businessType}
+                onChange={update('businessType')}
+              />
             </div>
-            <Textarea label="Business address" value={form.businessAddress} disabled rows={3} />
+            <Textarea
+              label="Business address"
+              value={form.businessAddress}
+              onChange={update('businessAddress')}
+              rows={3}
+            />
             <section className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-5">
               <h2 className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">Documents & images</h2>
               <div className="grid gap-4 md:grid-cols-2">

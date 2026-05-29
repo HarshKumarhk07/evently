@@ -12,21 +12,14 @@ import { useInfiniteScroll } from '../hooks/useInfiniteScroll.js';
 import { useMediaQuery } from '../hooks/useMediaQuery.js';
 import { useLocation } from '../context/LocationContext.jsx';
 import { listingApiFor } from '../api/listings.api.js';
-import { SORT_OPTIONS } from '../lib/constants.js';
-import { makeArtImage } from '../lib/visuals.js';
+import { SORT_OPTIONS, PRICE_RANGES } from '../lib/constants.js';
 
 const HERO = {
   dining: {
     title: 'Dining',
     subtitle: 'Tonight’s table is waiting — from rooftop bars to chef’s counters.',
-    image: makeArtImage({
-      theme: 'dining',
-      title: 'Dining',
-      subtitle: 'Tonight’s table is waiting',
-      seed: 'hero-dining',
-      width: 1600,
-      height: 500,
-    }),
+    image:
+      'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1600&q=80',
   },
   plays: {
     title: 'Plays',
@@ -45,7 +38,7 @@ const emptyFilters = {
   sort: 'newest',
   minRating: 0,
   cuisine: [],
-  priceRange: [],
+  priceBucket: '',
   feature: [],
   genre: [],
   category: [],
@@ -59,7 +52,14 @@ function toParams(filters, city, page) {
   if (filters.search) params.search = filters.search;
   if (filters.sort) params.sort = filters.sort;
   if (filters.minRating) params.minRating = filters.minRating;
-  ['cuisine', 'priceRange', 'feature', 'genre', 'category'].forEach((key) => {
+  if (filters.priceBucket) {
+    const bucket = PRICE_RANGES.find((p) => p.value === filters.priceBucket);
+    if (bucket) {
+      if (bucket.min != null) params.costMin = bucket.min;
+      if (bucket.max != null) params.costMax = bucket.max;
+    }
+  }
+  ['cuisine', 'feature', 'genre', 'category'].forEach((key) => {
     if (filters[key]?.length) params[key] = filters[key].join(',');
   });
   return params;

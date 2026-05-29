@@ -36,5 +36,7 @@ export function useFavorites() {
     [isAuthenticated, patchUser],
   );
 
-  return { isFavorite, toggle, pending };
+  const count = user?.favorites?.length || 0;
+
+  return { isFavorite, toggle, pending, count };
 }
