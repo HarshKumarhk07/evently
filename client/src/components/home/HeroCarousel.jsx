@@ -49,8 +49,8 @@ export default function HeroCarousel({ slides = [] }) {
               }
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-ink-950 via-ink-950/80 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-t from-ink-950/90 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-ink-950/70 via-ink-950/30 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-ink-950/60 to-transparent" />
         </motion.div>
       </AnimatePresence>
 
@@ -63,11 +63,11 @@ export default function HeroCarousel({ slides = [] }) {
           className="max-w-xl"
         >
           {slide.eyebrow && <Badge tone="brand">{slide.eyebrow}</Badge>}
-          <h2 className="mt-3 font-display text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-5xl">
+          <h2 className="mt-3 font-display text-2xl font-bold leading-tight text-white sm:text-3xl lg:text-4xl">
             {slide.title}
           </h2>
           {slide.subtitle && (
-            <p className="mt-3 max-w-md text-sm text-slate-300 sm:text-base">{slide.subtitle}</p>
+            <p className="mt-2.5 max-w-md text-sm text-slate-300">{slide.subtitle}</p>
           )}
           {slide.to && (
             <Link

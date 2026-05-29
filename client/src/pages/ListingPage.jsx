@@ -53,7 +53,9 @@ const emptyFilters = {
 
 /* Builds API query params from the active filter state. */
 function toParams(filters, city, page) {
-  const params = { page, limit: 12, city };
+  const params = { page, limit: 12 };
+  if (city?._id) params.cityId = city._id;
+  else if (city?.cityName) params.city = city.cityName;
   if (filters.search) params.search = filters.search;
   if (filters.sort) params.sort = filters.sort;
   if (filters.minRating) params.minRating = filters.minRating;
@@ -151,7 +153,8 @@ export default function ListingPage({ vertical }) {
             className="pb-6"
           >
             <h1 className="font-display text-3xl font-bold text-white sm:text-4xl">
-              {hero.title} in {city}
+              {hero.title}
+              {city?.cityName ? ` in ${city.cityName}` : ''}
             </h1>
             <p className="mt-1.5 max-w-lg text-sm text-slate-300">{hero.subtitle}</p>
           </motion.div>

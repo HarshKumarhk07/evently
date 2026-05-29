@@ -113,11 +113,7 @@ export default function HomePage() {
               Discover the best of <span className="text-gradient">dining, plays</span> &amp;
               events
             </h1>
-            <p className="mt-4 max-w-md text-base text-slate-400">
-              One premium platform to find tables, book theatre seats and grab
-              tickets to the experiences worth leaving home for.
-            </p>
-            <div className="mt-6">
+            <div className="mt-6 hidden md:block">
               <HeroSearch />
             </div>
           </motion.div>
@@ -144,16 +140,6 @@ export default function HomePage() {
           <ListingRow vertical="dining" items={recentlyViewed} />
         </section>
       )}
-
-      {/* Verticals */}
-      <section className="section mt-16">
-        <SectionHeader
-          eyebrow="Explore"
-          title="Where would you like to go?"
-          subtitle="Three ways to make your night out unforgettable."
-        />
-        <VerticalCards />
-      </section>
 
       {/* Trending dining */}
       <section className="section mt-16">
@@ -186,6 +172,16 @@ export default function HomePage() {
           to="/events"
         />
         <ListingRow vertical="events" items={data.events} loading={loading} />
+      </section>
+
+      {/* Verticals — moved below upcoming events */}
+      <section className="section mt-16">
+        <SectionHeader
+          eyebrow="Explore"
+          title="Where would you like to go?"
+          subtitle="Three ways to make your night out unforgettable."
+        />
+        <VerticalCards />
       </section>
 
     </div>

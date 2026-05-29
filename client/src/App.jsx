@@ -19,6 +19,7 @@ const ListYourBusinessPage = lazy(() => import('./pages/ListYourBusinessPage.jsx
 const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage.jsx'));
 const ManagerDashboard = lazy(() => import('./pages/manager/ManagerDashboard.jsx'));
 const ManagerProfilePage = lazy(() => import('./pages/manager/ManagerProfilePage.jsx'));
+const ManagerBookingsPage = lazy(() => import('./pages/manager/ManagerBookingsPage.jsx'));
 
 const DashboardLayout = lazy(() => import('./components/dashboard/DashboardLayout.jsx'));
 const DashboardHome = lazy(() => import('./pages/dashboard/DashboardHome.jsx'));
@@ -79,6 +80,14 @@ export default function App() {
               element={
                 <ProtectedRoute managerOnly>
                   <ManagerProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="manager/bookings"
+              element={
+                <ProtectedRoute managerOnly>
+                  <ManagerBookingsPage />
                 </ProtectedRoute>
               }
             />

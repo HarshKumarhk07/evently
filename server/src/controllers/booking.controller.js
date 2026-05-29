@@ -26,6 +26,11 @@ export const createBooking = asyncHandler(async (req, res) => {
 
   if (itemType === 'Restaurant') {
     quantity = reservation.guests;
+    /* Charge an estimated bill upfront so the booking actually goes through
+       Razorpay — costForTwo / 2 per guest. Managers who want truly-free
+       reservations can set costForTwo to 0. */
+    const perGuest = Math.round((item.costForTwo || 0) / 2);
+    amount = perGuest * quantity + SERVICE_FEE;
   } else {
     quantity = tickets.reduce((sum, t) => sum + t.quantity, 0);
     amount = tickets.reduce((sum, t) => sum + t.price * t.quantity, 0) + SERVICE_FEE;

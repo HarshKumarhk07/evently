@@ -79,7 +79,7 @@ export default function Navbar() {
             <button
               onClick={() => setSearchOpen(true)}
               aria-label="Search"
-              className="grid h-10 w-10 place-items-center rounded-xl border border-white/[0.07] bg-white/[0.03] text-slate-300 transition-colors hover:border-brand-500/40 hover:text-white"
+              className="hidden h-10 w-10 place-items-center rounded-xl border border-white/[0.07] bg-white/[0.03] text-slate-300 transition-colors hover:border-brand-500/40 hover:text-white md:grid"
             >
               <Search className="h-4.5 w-4.5" />
             </button>

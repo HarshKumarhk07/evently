@@ -5,17 +5,18 @@ import Avatar from '../../components/ui/Avatar.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { Input, Select } from '../../components/ui/Input.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useLocation } from '../../context/LocationContext.jsx';
 import { usersApi } from '../../api/users.api.js';
-import { CITIES } from '../../lib/constants.js';
 
 export default function ProfilePage() {
   const { user, patchUser } = useAuth();
+  const { cities } = useLocation();
   const fileRef = useRef(null);
 
   const [form, setForm] = useState({
     name: user?.name || '',
     phone: user?.phone || '',
-    city: user?.city || CITIES[0],
+    city: user?.city || '',
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -95,7 +96,10 @@ export default function ProfilePage() {
               label="City"
               value={form.city}
               onChange={update('city')}
-              options={CITIES.map((c) => ({ value: c, label: c }))}
+              options={[
+                { value: '', label: 'Choose a city' },
+                ...cities.map((c) => ({ value: c.cityName, label: c.cityName })),
+              ]}
             />
           </div>
           <div className="flex justify-end">

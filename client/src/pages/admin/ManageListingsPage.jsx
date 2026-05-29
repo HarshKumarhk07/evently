@@ -41,7 +41,9 @@ const blankForm = {
 function buildPayload(vertical, form) {
   const base = {
     city: form.city,
-    cityId: form.cityId,
+    /* Empty string for ObjectId triggers a Mongoose CastError that silently
+       blocks the whole save — only send cityId when we have a real id. */
+    cityId: form.cityId || undefined,
     locality: form.locality,
     description: form.description,
     coverImage:

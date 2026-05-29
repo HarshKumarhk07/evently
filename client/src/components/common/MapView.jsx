@@ -26,7 +26,10 @@ export default function MapView({ lat, lng, label, height = 280 }) {
   const validLng = Number.isFinite(lng) && lng !== 0 ? lng : 77.5946;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-ink-900" style={{ height, minHeight: 260 }}>
+    <div
+      className="relative isolate z-0 overflow-hidden rounded-2xl border border-white/[0.06] bg-ink-900"
+      style={{ height, minHeight: 260 }}
+    >
       <MapContainer
         center={[validLat, validLng]}
         zoom={14}

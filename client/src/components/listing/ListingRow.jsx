@@ -1,22 +1,24 @@
 import ListingCard from './ListingCard.jsx';
 import { CardSkeleton } from '../ui/Skeleton.jsx';
 
-/* Horizontally scrollable rail of listing cards — used on the home page. */
+/* Card rail — 2-column grid on mobile, horizontally scrollable rail on tablet+. */
 export default function ListingRow({ vertical, items = [], loading = false }) {
-  const content = loading
-    ? Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="w-[85vw] shrink-0 sm:w-[300px]">
-          <CardSkeleton />
-        </div>
-      ))
-    : items.map((item, i) => (
-        <div key={item._id} className="w-[85vw] shrink-0 sm:w-[300px]">
-          <ListingCard vertical={vertical} item={item} index={i} />
-        </div>
-      ));
+  const skeletonContent = Array.from({ length: 4 }).map((_, i) => (
+    <div key={i} className="sm:w-[300px] sm:shrink-0">
+      <CardSkeleton />
+    </div>
+  ));
+
+  const itemContent = items.map((item, i) => (
+    <div key={item._id} className="sm:w-[300px] sm:shrink-0">
+      <ListingCard vertical={vertical} item={item} index={i} />
+    </div>
+  ));
+
+  const content = loading ? skeletonContent : itemContent;
 
   return (
-    <div className="no-scrollbar -mx-4 flex gap-5 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
+    <div className="no-scrollbar grid grid-cols-2 gap-3 sm:-mx-0 sm:flex sm:gap-5 sm:overflow-x-auto sm:pb-2">
       {content}
     </div>
   );

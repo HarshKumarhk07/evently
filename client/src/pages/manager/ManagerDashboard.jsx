@@ -342,9 +342,17 @@ export default function ManagerDashboard() {
 
           {/* Activity */}
           <section className="mt-8">
-            <h2 className="mb-3 flex items-center gap-2 font-display text-base font-bold text-white">
-              <Activity className="h-4 w-4 text-brand-400" /> Recent activity
-            </h2>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 font-display text-base font-bold text-white">
+                <Activity className="h-4 w-4 text-brand-400" /> Recent activity
+              </h2>
+              <Link
+                to="/manager/bookings"
+                className="text-xs font-semibold text-brand-300 transition-colors hover:text-brand-200"
+              >
+                View all bookings →
+              </Link>
+            </div>
             {loading ? (
               <Skeleton className="h-28 rounded-xl" />
             ) : bookings.length === 0 ? (
@@ -572,7 +580,9 @@ function ActivityRow({ booking: b }) {
 function buildPayload(vertical, form) {
   const base = {
     city: form.city,
-    cityId: form.cityId,
+    /* Empty string for ObjectId triggers a Mongoose CastError that silently
+       blocks the whole save — only send cityId when we have a real id. */
+    cityId: form.cityId || undefined,
     locality: form.locality,
     description: form.description,
     coverImage: form.coverImage || undefined,
@@ -595,19 +605,39 @@ function buildPayload(vertical, form) {
     };
   }
   if (vertical === 'plays') {
-    return {
+    const payload = {
       ...base,
       title: form.name,
       language: form.language,
       duration: Number(form.duration || 0),
     };
+    if (form.ticketPrice) {
+      payload.seatCategories = [
+        {
+          name: 'Standard',
+          price: Number(form.ticketPrice),
+          totalSeats: Number(form.totalSeats || 100),
+        },
+      ];
+    }
+    return payload;
   }
-  return {
+  const payload = {
     ...base,
     title: form.name,
     category: form.category,
     startDate: form.startDate,
   };
+  if (form.ticketPrice) {
+    payload.ticketTypes = [
+      {
+        name: 'General',
+        price: Number(form.ticketPrice),
+        totalQuantity: Number(form.totalSeats || 200),
+      },
+    ];
+  }
+  return payload;
 }
 
 function getInitialForm(item, defaultCity) {
@@ -626,6 +656,8 @@ function getInitialForm(item, defaultCity) {
       duration: 120,
       category: EVENT_CATEGORIES[0],
       startDate: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+      ticketPrice: 500,
+      totalSeats: 100,
       lat: '',
       lng: '',
     };
@@ -644,6 +676,14 @@ function getInitialForm(item, defaultCity) {
     duration: item.duration || 120,
     category: item.category || EVENT_CATEGORIES[0],
     startDate: item.startDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+    ticketPrice:
+      item.seatCategories?.[0]?.price ||
+      item.ticketTypes?.[0]?.price ||
+      500,
+    totalSeats:
+      item.seatCategories?.[0]?.totalSeats ||
+      item.ticketTypes?.[0]?.totalQuantity ||
+      100,
     lat: item.location?.lat || item.locationGeo?.coordinates?.[1] || '',
     lng: item.location?.lng || item.locationGeo?.coordinates?.[0] || '',
   };
@@ -765,6 +805,24 @@ function CreateListingModal({ open, onClose, defaultVertical, defaultCity, item,
               )}
               {vertical === 'events' && (
                 <Input label="Start date" type="date" value={form.startDate || ''} onChange={set('startDate')} />
+              )}
+              {(vertical === 'plays' || vertical === 'events') && (
+                <>
+                  <Input
+                    label="Ticket price (₹)"
+                    type="number"
+                    placeholder="500"
+                    value={form.ticketPrice || ''}
+                    onChange={set('ticketPrice')}
+                  />
+                  <Input
+                    label={vertical === 'plays' ? 'Total seats' : 'Tickets available'}
+                    type="number"
+                    placeholder="100"
+                    value={form.totalSeats || ''}
+                    onChange={set('totalSeats')}
+                  />
+                </>
               )}
               <Input label="Latitude" type="number" step="any" placeholder="19.0760" value={form.lat || ''} onChange={(e) => setForm((prev) => ({ ...prev, lat: e.target.value }))} />
               <Input label="Longitude" type="number" step="any" placeholder="72.8777" value={form.lng || ''} onChange={(e) => setForm((prev) => ({ ...prev, lng: e.target.value }))} />

@@ -6,9 +6,9 @@ import Button from '../../components/ui/Button.jsx';
 import { Input, Textarea, Select } from '../../components/ui/Input.jsx';
 import Badge from '../../components/ui/Badge.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useLocation } from '../../context/LocationContext.jsx';
 import { managerApi } from '../../api/manager.api.js';
 import { usersApi } from '../../api/users.api.js';
-import { CITIES } from '../../lib/constants.js';
 import { formatDate } from '../../lib/format.js';
 
 function mediaUrl(value) {
@@ -25,6 +25,7 @@ function mediaList(value) {
 
 export default function ManagerProfilePage() {
   const { user, patchUser } = useAuth();
+  const { cities } = useLocation();
   const fileRef = useRef(null);
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -57,7 +58,7 @@ export default function ManagerProfilePage() {
   const [form, setForm] = useState({
     name: user?.name || '',
     phone: user?.phone || '',
-    city: user?.city || CITIES[0],
+    city: user?.city || '',
     businessName: manager.businessName || '',
     businessType: manager.businessType || '',
     businessAddress: manager.businessAddress || '',
@@ -67,7 +68,7 @@ export default function ManagerProfilePage() {
     setForm({
       name: profile?.name || '',
       phone: profile?.phone || '',
-      city: profile?.city || CITIES[0],
+      city: profile?.city || '',
       businessName: profile?.managerProfile?.businessName || '',
       businessType: profile?.managerProfile?.businessType || '',
       businessAddress: profile?.managerProfile?.businessAddress || '',
@@ -248,7 +249,10 @@ export default function ManagerProfilePage() {
                 label="City"
                 value={form.city}
                 onChange={update('city')}
-                options={CITIES.map((c) => ({ value: c, label: c }))}
+                options={[
+                  { value: '', label: 'Choose a city' },
+                  ...cities.map((c) => ({ value: c.cityName, label: c.cityName })),
+                ]}
               />
               <Input label="Email" value={profile.email} disabled />
             </div>

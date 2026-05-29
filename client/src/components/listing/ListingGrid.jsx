@@ -10,9 +10,9 @@ export default function ListingGrid({
   skeletonCount = 8,
   empty,
 }) {
-  if (loading && items.length === 0) {
+  if (loading) {
     return (
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
         {Array.from({ length: skeletonCount }).map((_, i) => (
           <CardSkeleton key={i} />
         ))}
@@ -20,7 +20,7 @@ export default function ListingGrid({
     );
   }
 
-  if (!loading && items.length === 0) {
+  if (items.length === 0) {
     return (
       empty || (
         <EmptyState
@@ -32,7 +32,7 @@ export default function ListingGrid({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
       {items.map((item, i) => (
         <ListingCard key={item._id} vertical={vertical} item={item} index={i} />
       ))}

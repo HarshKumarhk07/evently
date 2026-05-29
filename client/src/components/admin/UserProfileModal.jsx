@@ -39,7 +39,7 @@ export default function UserProfileModal({ open, onClose, user }) {
 
   const manager = local?.managerProfile || {};
   const avatarUrl = getMediaUrl(local?.avatar);
-  const profileImageUrl = getMediaUrl(local.avatar);
+  const profileImageUrl = getMediaUrl(local?.avatar);
   const businessLicenseUrl = getMediaUrl(manager.businessLicense);
   const idProofUrl = getMediaUrl(manager.idProof);
   const businessImages = useMemo(() => getMediaList(manager.businessImages), [manager.businessImages]);

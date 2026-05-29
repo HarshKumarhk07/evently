@@ -3,13 +3,23 @@ import { listCities, nearestCity as apiNearest } from '../api/cities.api.js';
 
 const LocationContext = createContext(null);
 const STORAGE_KEY = 'bookify_city_object';
+const ALLOWED_CITIES_LC = ['rohtak', 'noida'];
+const isAllowed = (name) =>
+  Boolean(name) && ALLOWED_CITIES_LC.includes(String(name).trim().toLowerCase());
 
 export function LocationProvider({ children }) {
   const [cities, setCities] = useState([]);
   const [selected, setSelected] = useState(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : null;
+      const saved = raw ? JSON.parse(raw) : null;
+      /* Drop any previously-saved city that's no longer in the allowed list
+         — keeps users from being stuck on a city the picker no longer offers. */
+      if (saved && !isAllowed(saved.cityName)) {
+        localStorage.removeItem(STORAGE_KEY);
+        return null;
+      }
+      return saved;
     } catch (e) {
       return null;
     }

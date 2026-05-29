@@ -169,9 +169,19 @@ export function createListingController(Model, typeName) {
     const payload = { ...req.body };
     if (req.user.role !== 'admin') delete payload.owner;
 
-    Object.assign(existing, payload);
+    /* Use Mongoose's set() instead of Object.assign so nested paths
+       (location, locationGeo) are tracked as modified and persisted. */
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value === undefined) return;
+      existing.set(key, value);
+      existing.markModified(key);
+    });
+
     await existing.save();
-    return ok(res, existing, `${typeName} updated`);
+    /* Re-read so the client sees exactly what the DB now holds (defensive
+       against any post-save mutation). */
+    const fresh = await Model.findById(existing._id).lean();
+    return ok(res, fresh, `${typeName} updated`);
   });
 
   const remove = asyncHandler(async (req, res) => {

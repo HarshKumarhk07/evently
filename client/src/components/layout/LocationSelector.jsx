@@ -27,6 +27,14 @@ const CITY_ICON = {
 };
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
+/* Hard launch-gate: only these two cities are bookable for now.
+   Everything else is hidden from the picker and blocked from auto-detect.
+   Case-insensitive so admin entries like "rohtak" or "ROHTAK" still match. */
+const ALLOWED_CITIES = ['Rohtak', 'Noida'];
+const ALLOWED_CITIES_LC = ALLOWED_CITIES.map((c) => c.toLowerCase());
+const isAllowedCity = (name) =>
+  Boolean(name) && ALLOWED_CITIES_LC.includes(String(name).trim().toLowerCase());
+
 function pickNearestCityFromList(list = [], lat, lng) {
   if (!list || !list.length) return null;
   let best = list[0];
@@ -90,13 +98,18 @@ export default function LocationSelector() {
   /* Search filters both popular and all-cities. The A–Z letter filter
      only applies when there's no active search. */
   const popularFiltered = useMemo(() => {
-    const popular = cities.filter((c) => c.isPopular);
+    /* With the allow-list gate enabled, every selectable city is shown as
+       popular — admins don't have to remember to tick `isPopular`. */
+    const popular = cities.filter((c) => isAllowedCity(c.cityName));
     return searching
       ? popular.filter((c) => c.cityName.toLowerCase().includes(trimmed))
       : popular;
   }, [cities, searching, trimmed]);
 
-  const allNames = useMemo(() => cities.map((c) => c.cityName), [cities]);
+  const allNames = useMemo(
+    () => cities.map((c) => c.cityName).filter(isAllowedCity),
+    [cities],
+  );
 
   const allFiltered = useMemo(() => {
     if (searching) return allNames.filter((n) => n.toLowerCase().includes(trimmed));
@@ -109,6 +122,10 @@ export default function LocationSelector() {
   );
 
   const select = (nextName) => {
+    if (!isAllowedCity(nextName)) {
+      toast.error(`For now, you can only choose ${ALLOWED_CITIES.join(' or ')}`);
+      return;
+    }
     const next = cities.find((c) => c.cityName === nextName);
     if (next) {
       setCity(next);
@@ -138,14 +155,22 @@ export default function LocationSelector() {
           const cityMatch = findCityByName(cities, reverseCity);
           const found = cityMatch || (await detectNearest(latitude, longitude));
           setDetecting(false);
-          if (found) {
+          if (found && isAllowedCity(found.cityName)) {
             setCity(found);
             setOpen(false);
             toast.success(`Detected ${found.cityName}`);
             return;
           }
-          // fallback to client-side nearest
-          const f = pickNearestCityFromList(cities, latitude, longitude);
+          if (found) {
+            toast.error(`We're only live in ${ALLOWED_CITIES.join(' and ')} for now`);
+            return;
+          }
+          // fallback to client-side nearest, still gated to allowed cities
+          const f = pickNearestCityFromList(
+            cities.filter((c) => isAllowedCity(c.cityName)),
+            latitude,
+            longitude,
+          );
           if (f) select(f);
         } catch (err) {
           setDetecting(false);
@@ -254,6 +279,7 @@ export default function LocationSelector() {
                       {popularFiltered.map((c) => {
                         const Icon = CITY_ICON[c.cityName] || Landmark;
                         const selected = c.cityName === city?.cityName;
+                        const cover = c.image || c.coverImage;
                         return (
                           <button
                             key={c.cityName}
@@ -267,15 +293,25 @@ export default function LocationSelector() {
                           >
                             <span
                               className={cn(
-                                'grid h-14 w-14 place-items-center rounded-2xl transition-colors',
+                                'grid h-14 w-14 place-items-center overflow-hidden rounded-2xl transition-colors',
                                 selected
                                   ? 'bg-white text-brand-600'
                                   : 'bg-white text-brand-500 group-hover:text-brand-600',
                               )}
                             >
-                              <Icon strokeWidth={1.4} className="h-7 w-7" />
+                              {cover ? (
+                                <img
+                                  src={cover}
+                                  alt={c.cityName}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <Icon strokeWidth={1.4} className="h-7 w-7" />
+                              )}
                             </span>
-                            <span className="mt-2.5 text-sm font-semibold">{c.name}</span>
+                            <span className="mt-2.5 text-sm font-semibold">
+                              {c.cityName}
+                            </span>
                           </button>
                         );
                       })}

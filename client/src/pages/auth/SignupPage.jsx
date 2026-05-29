@@ -8,11 +8,10 @@ import Button from '../../components/ui/Button.jsx';
 import { Input, Select } from '../../components/ui/Input.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useLocation } from '../../context/LocationContext.jsx';
-import { CITIES } from '../../lib/constants.js';
 
 export default function SignupPage() {
   const { register } = useAuth();
-  const { city: selectedCity } = useLocation();
+  const { city: selectedCity, cities } = useLocation();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -20,7 +19,7 @@ export default function SignupPage() {
     email: '',
     password: '',
     phone: '',
-    city: selectedCity?.cityName || CITIES[0],
+    city: selectedCity?.cityName || '',
     confirmPassword: '',
   });
   const [errors, setErrors] = useState({});
@@ -108,7 +107,10 @@ export default function SignupPage() {
             label="City"
             value={form.city}
             onChange={update('city')}
-            options={CITIES.map((c) => ({ value: c, label: c }))}
+            options={[
+              { value: '', label: 'Choose a city' },
+              ...cities.map((c) => ({ value: c.cityName, label: c.cityName })),
+            ]}
           />
         </div>
         <Input

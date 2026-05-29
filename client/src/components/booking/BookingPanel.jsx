@@ -42,10 +42,13 @@ export default function BookingPanel({ vertical, item }) {
   const total = selectedTickets.reduce((sum, t) => sum + t.price * t.quantity, 0);
   const ticketCount = selectedTickets.reduce((sum, t) => sum + t.quantity, 0);
 
+  const diningPerGuest = Math.round((item.costForTwo || 0) / 2);
+  const diningTotal = diningPerGuest * guests;
+
   const buildDraft = () => {
     const base = { vertical, item, itemType: cfg.refType, itemId: item._id };
     if (vertical === 'dining') {
-      return { ...base, amount: 0, reservation: { date, time, guests } };
+      return { ...base, amount: diningTotal, reservation: { date, time, guests } };
     }
     return {
       ...base,
@@ -70,7 +73,11 @@ export default function BookingPanel({ vertical, item }) {
       {vertical === 'dining' ? (
         <>
           <h3 className="font-display text-lg font-semibold text-white">Reserve a table</h3>
-          <p className="mt-1 text-sm text-slate-400">Free to book · instant confirmation</p>
+          <p className="mt-1 text-sm text-slate-400">
+            {diningPerGuest > 0
+              ? `${formatCurrency(diningPerGuest)} per guest · pay now to confirm`
+              : 'Free to book · instant confirmation'}
+          </p>
 
           <div className="mt-4 space-y-3">
             <Input
@@ -158,8 +165,22 @@ export default function BookingPanel({ vertical, item }) {
             </span>
           </div>
         )}
+        {vertical === 'dining' && diningPerGuest > 0 && (
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-sm text-slate-400">
+              Total · {guests} guest{guests > 1 ? 's' : ''}
+            </span>
+            <span className="font-display text-xl font-bold text-white">
+              {formatCurrency(diningTotal)}
+            </span>
+          </div>
+        )}
         <Button fullWidth size="lg" icon={Ticket} disabled={!canBook} onClick={openBooking}>
-          {vertical === 'dining' ? 'Reserve table' : 'Proceed to book'}
+          {vertical === 'dining'
+            ? diningPerGuest > 0
+              ? 'Pay & reserve'
+              : 'Reserve table'
+            : 'Proceed to book'}
         </Button>
       </div>
 

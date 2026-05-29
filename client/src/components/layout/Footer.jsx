@@ -12,26 +12,10 @@ const columns = [
     ],
   },
   {
-    title: 'Company',
-    links: [
-      { label: 'About', to: '/' },
-      { label: 'Careers', to: '/' },
-      { label: 'Press', to: '/' },
-    ],
-  },
-  {
     title: 'For partners',
     links: [
       { label: 'List your business', to: '/list-your-business' },
       { label: 'Partner login', to: '/login' },
-    ],
-  },
-  {
-    title: 'Support',
-    links: [
-      { label: 'Help Centre', to: '/' },
-      { label: 'Terms', to: '/' },
-      { label: 'Privacy', to: '/' },
     ],
   },
 ];
@@ -82,9 +66,8 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-white/[0.06]">
-        <div className="section flex flex-col items-center justify-between gap-2 py-5 text-xs text-slate-600 sm:flex-row">
-          <p>© {new Date().getFullYear()} Bookify. Built as a portfolio project.</p>
-          <p>Crafted with the MERN stack.</p>
+        <div className="section flex items-center justify-center gap-2 py-5 text-xs text-slate-600">
+          <p>© {new Date().getFullYear()} Bookify.</p>
         </div>
       </div>
     </footer>

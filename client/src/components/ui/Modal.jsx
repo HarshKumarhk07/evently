@@ -30,7 +30,7 @@ export default function Modal({ open, onClose, title, size = 'md', children, foo
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center">
+        <div className="fixed inset-0 z-[100] flex items-start justify-center sm:items-center">
           <motion.div
             className="absolute inset-0 bg-black/75 backdrop-blur-sm"
             initial={{ opacity: 0 }}
@@ -43,8 +43,8 @@ export default function Modal({ open, onClose, title, size = 'md', children, foo
             aria-modal="true"
             aria-label={title}
             className={cn(
-              'relative w-full glass rounded-t-3xl sm:rounded-3xl',
-              'max-h-[90vh] overflow-hidden flex flex-col',
+              'relative mt-4 w-full glass rounded-3xl sm:mt-0',
+              'max-h-[92vh] overflow-hidden flex flex-col',
               sizes[size],
             )}
             initial={{ opacity: 0, y: 40, scale: 0.98 }}
